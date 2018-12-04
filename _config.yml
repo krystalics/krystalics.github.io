@@ -5,7 +5,7 @@ header-img: img/home-bg.jpg
 email: anti_light@qq.com
 description: "只是记录一些文章"
 keyword: "university，articles，learning"
-url: "https://krystalics.github.io              # your host, for absolute URL
+url: "https://krystalics.github.io"              # your host, for absolute URL
 baseurl: ""                             # for example, '/blog' if your blog hosted on 'host/blog'
 
 # Publish posts or collection documents with a future date.
@@ -14,7 +14,7 @@ future: true
 # SNS settings
 RSS: false
 
-github_username:    krystalics
+github_username: krystalics
 
 #facebook_username:  huxpro
 #linkedin_username:  firstname-lastname-idxxxx
