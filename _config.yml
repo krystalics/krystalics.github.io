@@ -2,7 +2,7 @@
 title: Krystalics blog
 SEOTitle: 林家宝的博客 | Krystalics Blog
 header-img: img/home-bg.jpg
-email: huxpro@gmail.com
+email: anti_light@qq.com
 description: "只是记录一些文章"
 keyword: "university，articles，learning"
 url: "https://krystalics.github.io              # your host, for absolute URL
@@ -71,13 +71,13 @@ netease_comment: false
 
 # Google Analytics
 ga_track_id: 'UA-49627206-1'            # Format: UA-xxxxxx-xx
-ga_domain: huangxuan.me
+ga_domain: krystalics.github.io
 
 
 
 # Sidebar settings
 sidebar: true                           # whether or not using Sidebar.
-sidebar-about-description: "For the next quantum leap<br>离开世界之前，一切都是过程"
+sidebar-about-description: "好好学习，天天向上"
 sidebar-avatar: /img/avatar-hux-ny.jpg      # use absolute URL, seeing it's used in both `/` and `/about/`
 
 
@@ -96,4 +96,3 @@ service-worker: true
 
 # MathJax rendering for layout:page (e.g. post preview)
 page-mathjax: false
-
