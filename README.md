@@ -2,7 +2,6 @@
 
 ### [View Live Hux Blog &rarr;](https://huangxuan.me)
 
-![](http://huangxuan.me/img/blog-desktop.jpg)
 
 ### 这个项目是git自 Hux Blog 
 
