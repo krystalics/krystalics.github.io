@@ -1,4 +1,4 @@
-*《Spring Boot 实战》汪云飞*
+《Spring Boot 实战》汪云飞*
 
 ---
 
@@ -20,7 +20,7 @@
 
 ​	Thymeleaf是一个Java的类库，它是一个 xml/xhtml/html5 的模板引擎，可以作为MVC的Web应用的View层。Thymeleaf还提供了额外的模块与Spring MVC集成，下面演示一些用法，其中引入了Bootstrap(样式控制)，Jquery(DOM操作)。
 
-1. 引入Thymeleaf：通过 @{} 引用Web资源。而不是使用访问路径。这就相当于 项目目录resources/static/public 前缀。如下面的例子中， jquery-1.10.2.min.js 就是在static 目录下。
+- 引入Thymeleaf：通过 @{} 引用Web资源。而不是使用访问路径。这就相当于 项目目录resources/static/public 前缀。如下面的例子中， jquery-1.10.2.min.js 就是在static 目录下。
 
 ```html
 <!DOCTYPE html>
@@ -52,7 +52,7 @@
 </html>
 ```
 
-2. 访问Model中的数据，就是用 th: ....${} 来做动态处理。
+- 访问Model中的数据，就是用 th: ....${} 来做动态处理。
 
 ```html
 <div class="panel panel-primary"> 
@@ -68,7 +68,7 @@
 </div>
 ```
 
-3. model中的数据迭代：下面用 th:each做循环，person作为迭代元素来使用。
+- model中的数据迭代：下面用 th:each做循环，person作为迭代元素来使用。
 
 ```html
 <div class="panel panel-primary">
@@ -86,7 +86,7 @@
 </div>
 ```
 
-4. 数据判断
+- 数据判断
 
 ```html
 <div th:if="${not #list.isEmpty(people)}">
@@ -100,7 +100,7 @@
 
 #### 7.2.4 实战
 
-1. 新建Spring Boot项目，引入依赖
+- 新建Spring Boot项目，引入依赖
 
 ```xml
 <dependency>
@@ -109,10 +109,10 @@
 </dependency>
 ```
 
-2. 实例JavaBean ：此类用来在模板展示数据用，包含name和id属性，这里取前面几章写的DemoObj类
+- 实例JavaBean ：此类用来在模板展示数据用，包含name和id属性，这里取前面几章写的DemoObj类
 
-3. 将静态资源放入static目录下，如jQuery，和Bootstrap 。
-4. 数据准备。在之前的DemoController中加入下面内容
+- 将静态资源放入static目录下，如jQuery，和Bootstrap 。
+- 数据准备。在之前的DemoController中加入下面内容
 
 ```java
 @RequestMapping("/bootstrap")
@@ -132,7 +132,7 @@ public String bootstrap(Model model){
 }
 ```
 
-5. 在 template目录下 创建bootstrap_1.html
+- 在 template目录下 创建bootstrap_1.html
 
 ```html
 <!DOCTYPE html>
@@ -197,7 +197,7 @@ public String bootstrap(Model model){
 </html>
 ```
 
-6. 运行并访问localhost:8088/testwar/bootstrap 即可。
+- 运行并访问localhost:8088/testwar/bootstrap 即可。
 
 
 
@@ -209,8 +209,9 @@ public String bootstrap(Model model){
 
 1. **自动配置的ViewResolver**
 
-   1. ContentNegotiatingViewResolver ：这是Spring MVC提供的一个特殊的Vie wResolver。不自己处理View，而是代理给不同的ViewResolver来处理不同的View，所以它的优先级最高。
-   2. BeanNameViewResolver：在控制器中的一个方法返回值的字符串（view name）会根据BeanNameViewResolver去查找Bean的名称为返回字符串的View来渲染视图。例如：
+   - ContentNegotiatingViewResolver ：这是Spring MVC提供的一个特殊的Vie wResolver。不自己处理View，而是代理给不同的ViewResolver来处理不同的View，所以它的优先级最高。
+
+   - BeanNameViewResolver：在控制器中的一个方法返回值的字符串（view name）会根据BeanNameViewResolver去查找Bean的名称为返回字符串的View来渲染视图。例如：
 
    ```java
    //定义BeanNameViewResolver的bean
@@ -234,7 +235,7 @@ public String bootstrap(Model model){
    }
    ```
 
-   3. InternalResourceViewResolver：这是一个极为常用的ViewResolver。主要通过设置前缀，后缀，以及控制器中方法来返回视图名的字符串，以得到实际页面。
+   - InternalResourceViewResolver：这是一个极为常用的ViewResolver。主要通过设置前缀，后缀，以及控制器中方法来返回视图名的字符串，以得到实际页面。
 
 
 2. **自动配置的静态资源**：在自动配置类的addResourceHandlers 方法中定义了以下静态资源的自动配置。
@@ -243,7 +244,7 @@ public String bootstrap(Model model){
 
    2.webjar：就是将我们常用的脚本框架封装在jar包中的jar包，如jQuery，bootstrap
 
-  3.**自动配置的Formatter和Converter**，只要我们**定义了Converter，GenericConverter和Formatter接口实现类的Bean，这些Bean就会自动注册到Spring MVC中了。**
+  **3.自动配置的Formatter和Converter**，只要我们**定义了Converter，GenericConverter和Formatter接口实现类的Bean，这些Bean就会自动注册到Spring MVC中了。**
 
   **4.自动配置的HTTPMessageConverters**，如果要增加自定义的HTTPMessageConverter，只需要定义一个自己的HTTPMessageConverter的Bean。然后在此Bean中注册。
 
@@ -281,7 +282,7 @@ public class WebMvcConfig implements WebMvcConfigure{
 
 ​	当使用嵌入式的Servlet容器(Tomcat，Jetty等)时，我们通过将Servlet，Filter和Listener声明为Bean而达到注册效果。或者注册 ServletRegistrationBean，FilterRegistrationBean和ListenerRegistrationBean 的Bean。
 
-1. 直接注册Bean的示例 
+- 直接注册Bean的示例 
 
 ```java
 @Bean
@@ -300,7 +301,7 @@ public ZzListener zzListener(){
 }
 ```
 
-2. RegistrationBean的示例
+- RegistrationBean的示例
 
 ```java
 @Bean
@@ -346,9 +347,9 @@ server.context-path=/  # 配置访问路径，默认为 /
 
 ​	在基于B/S的web应用中，是通过Https来实现SSL的。Https是以安全为目标的Http通道。在Http层下加入SSL。Spring Boot 做SSl配置时需要如下操作；  **生成证书**：使用SSl首先需要一个证书，可以是自签名的，也可以是从SSL授权中心获得的。在本例中演示自授权证书的生成。
 
-1. 每一个JDK或JRE里都有一个叫keytool的工具，在cmd命令行(前提是JAVA_HOME在Path里)中输入`keytool -genkey -alias tomcat`  (然后按照指示填写内容，**就会在当前目录下生成一个 .keystore文件。**（我个人实践之后发现是在系统的user目录下）。其中会有要你输入两次密码，保证两个密码(一个为Tomcat密码)一致才能顺利启动tomcat
+- 每一个JDK或JRE里都有一个叫keytool的工具，在cmd命令行(前提是JAVA_HOME在Path里)中输入`keytool -genkey -alias tomcat`  (然后按照指示填写内容，**就会在当前目录下生成一个 .keystore文件。**（我个人实践之后发现是在系统的user目录下）。其中会有要你输入两次密码，保证两个密码(一个为Tomcat密码)一致才能顺利启动tomcat
 
-2. **Spring Boot 配置SSL**：
+- **Spring Boot 配置SSL**：
 
 ```properties
 server.ssl.key-store-.keystore
@@ -373,7 +374,7 @@ server.ssl.keyAlias:tomcat
 
 ​	原因是我们定义了ssl 却用http访问是被禁止的。
 
-3. **http与https共存：**在程序入口类中加入下面这段代码(spring boot 2.x之后的)
+- **http与https共存：**在程序入口类中加入下面这段代码(spring boot 2.x之后的)
 
 ```java
 @Bean
@@ -426,7 +427,7 @@ spring.mvc.favicon.enabled=false
 
 **广播式： 服务端有消息，会将信息发送给所有连接了当前endPoint 的浏览器**
 
-   	1. 配置WebSocket 。开启WebSocket支持，并实现 WebSocketMessageBrokerConfigurer  接口，重写方法来配置它。
+- 配置WebSocket 。开启WebSocket支持，并实现 WebSocketMessageBrokerConfigurer  接口，重写方法来配置它。
 
 ```java
 package com.example.websocket;
@@ -455,7 +456,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 }
 ```
 
-2. 浏览器向服务器发送的消息用一个类WiselyMessage来接受
+- 浏览器向服务器发送的消息用一个类WiselyMessage来接受
 
 ```java
 package com.example.websocket;
@@ -470,7 +471,7 @@ public class WiselyMessage {
 }
 ```
 
-3. 服务端用里一个类WiselyResponse 发送消息
+- 服务端用里一个类WiselyResponse 发送消息
 
 ```java
 package com.example.websocket;
@@ -489,7 +490,7 @@ public class WiselyResponse {
 }
 ```
 
-4. 演示控制器
+- 演示控制器
 
 ```java
 package com.example.websocket;
@@ -518,8 +519,9 @@ public class WsController {
 }
 ```
 
-5. 添加脚本将 stomp.min.js ，sock.min.js 以及jQuery放置在 /static 下。
-6. 演示界面，新建ws.html
+- 添加脚本将 stomp.min.js ，sock.min.js 以及jQuery放置在 /static 下。
+
+- 演示界面，新建ws.html
 
 ```html
 <!DOCTYPE html>
@@ -603,7 +605,7 @@ public class WsController {
 
 ​	本例中演示一个简单的聊天室程序，例子中只有两个用户，互相发消息给彼此。因为需要用户相关的内容，所以需要引入简单的Spring Security相关内容。
 
-1. 添加Spring Security 的starter pom 
+- 添加Spring Security 的starter pom 
 
 ```xml
 <dependency>
@@ -616,7 +618,7 @@ public class WsController {
 </dependency>
 ```
 
-2. Spring Security 的简单配置。
+- Spring Security 的简单配置。
 
 ```java
 package com.example.websocket.oneline;
@@ -662,7 +664,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 }
 ```
 
-3. 配置WebSocket
+- 配置WebSocket
 
 ```java
 package com.example.websocket;
@@ -694,7 +696,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 }
 ```
 
-4. 写控制器，在之前的WsController里增加代码如下
+- 写控制器，在之前的WsController里增加代码如下
 
 ```java
 package com.example.websocket;
@@ -735,7 +737,7 @@ public class WsController {
 }
 ```
 
-5. 登录界面 login.html  这里引入了 bootstrap 的登录模板
+- 登录界面 login.html  这里引入了 bootstrap 的登录模板
 
 ```html
 <!DOCTYPE html>
@@ -805,7 +807,7 @@ public class WsController {
 </html>
 ```
 
-6. 聊天界面 chat.html
+- 聊天界面 chat.html
 
 ```html
 <!DOCTYPE html>
@@ -859,14 +861,14 @@ public class WsController {
 </html>
 ```
 
-7. 增加到viewController上,映射上面两个html
+- 增加到viewController上,映射上面两个html
 
 ```java
 registry.addViewController("/login").setViewName("login");
 registry.addViewController("/chat").setViewName("chat");
 ```
 
-8. 运行，预期效果是：两个用户登录系统，可以互发消息。但是一个浏览器的用户会话session是共享的，我们可以在chrome设置两个独立的用户，从而实现用户会话session隔离。如下面这张图
+- 运行，预期效果是：两个用户登录系统，可以互发消息。但是一个浏览器的用户会话session是共享的，我们可以在chrome设置两个独立的用户，从而实现用户会话session隔离。如下面这张图
 
 ![https://github.com/MrAlan/MyPostPicture/blob/master/40.png?raw=true](https://github.com/MrAlan/MyPostPicture/blob/master/40.png?raw=true)
 

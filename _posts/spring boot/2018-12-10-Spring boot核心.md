@@ -99,14 +99,14 @@ Spring Boot 会自动扫描@SpringBootApplication 所在类的同级包以及下
 
 ​	不仅可以用来配置，还可以当做存储文件使用。可以用@Value 来注入 在之前的章节里有介绍，但是都用@Value就很麻烦。SpringBoot提供了**基于类型安全的配置方式** 通过@ConfigurationProperties 将properties的属性和一个Bean的属性关联。
 
-1. 在application.properties增加属性如下。也可以新建一个properties文件
+- 在application.properties增加属性如下。也可以新建一个properties文件
 
 ```properties
 book.author=wjf
 book.name=spring boot in action
 ```
 
-2. 引入配置依赖
+- 引入配置依赖
 
 ```xml
 <dependency>
@@ -116,7 +116,7 @@ book.name=spring boot in action
 </dependency>
 ```
 
-3. 类型安全的Bean
+- 类型安全的Bean
 
 ```java
 package com.example.springbootredis.ch1;
@@ -148,7 +148,7 @@ public class Temp {
 }
 ```
 
-4. 测试
+- 测试
 
 ```java
 package com.example.springbootredis;
@@ -205,7 +205,7 @@ public class SpringbootredisApplication {
 
 ​	可以通过在application.properties中加入`debug=true` 来确定项目运行时有哪些自动配置启用了，哪些没有。 后面的内容有些繁琐就不记录了。直接开始写starter pom吧。
 
-1. 新建一个的Maven项目。artifactID就叫 spring-boot-starter-hello 并修改pom.xml如下
+- 新建一个的Maven项目。artifactID就叫 spring-boot-starter-hello 并修改pom.xml如下
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -244,7 +244,7 @@ public class SpringbootredisApplication {
 </project>
 ```
 
-2. 属性配置
+- 属性配置
 
 ```java
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -268,7 +268,7 @@ public class HelloServiceProperties {
 }
 ```
 
-3. 判断依据类
+- 判断依据类
 
 ```java
 public class HelloService {
@@ -288,7 +288,7 @@ public class HelloService {
 }
 ```
 
-4. 自动配置类
+- 自动配置类
 
 ```java
 import org.springframework.beans.factory.annotation.Autowired;
@@ -322,7 +322,7 @@ public class HelloServiceAutoConfiguration {
 }
 ```
 
-5. 注册配置。若想要自动配置生效，需要注册自动配置类。在src/main/resources 下新建META-INF/spring.factories 。里面内容如下，若有多个配置用逗号隔开。项目中如果没有resources目录，不能直接新建，要通过 File -> new -> Source Folder 。在Folder Name 那栏填上 src/main/resources 。
+- 注册配置。若想要自动配置生效，需要注册自动配置类。在src/main/resources 下新建META-INF/spring.factories 。里面内容如下，若有多个配置用逗号隔开。项目中如果没有resources目录，不能直接新建，要通过 File -> new -> Source Folder 。在Folder Name 那栏填上 src/main/resources 。
 
 ```factories
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=HelloServiceAutoConfiguration

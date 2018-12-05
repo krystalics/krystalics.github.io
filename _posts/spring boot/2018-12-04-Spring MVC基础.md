@@ -227,80 +227,80 @@
 
 ##### 使用内置Tomcat步骤：
 
- 1. 打开IDEA-> new Project -> Spring Initializr -> 填完Group，Article -> 选择Web ->勾选Web->next ->Finish。创建完毕后，会有一个java文件如下：
+- 打开IDEA-> new Project -> Spring Initializr -> 填完Group，Article -> 选择Web ->勾选Web->next ->Finish。创建完毕后，会有一个java文件如下：
 
-    ```java
-    package com.example.demo;
-    
-    import org.springframework.boot.autoconfigure.SpringBootApplication;
-    
-    @SpringBootApplication        //表示这个是应用入口，容器
-    public class DemoApplication {
-    
-        public static void main(String []args){
-            SpringApplication.run(DemoApplication.class,args);
-        }
+```java
+package com.example.demo;
+
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication        //表示这个是应用入口，容器
+public class DemoApplication {
+
+    public static void main(String []args){
+        SpringApplication.run(DemoApplication.class,args);
     }
-    
-    ```
+}
 
-    不需要配置Tomcat ，因为在引入SpringBoot的时候，就已经包含了下面Tomcat的依赖。
+```
 
-    ```xml
-    <dependency>
-          <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-starter-web</artifactId>
-    </dependency> 
-    <!--引入这个依赖后，下面那个就已经自动引入了	-->
-    ```
+不需要配置Tomcat ，因为在引入SpringBoot的时候，就已经包含了下面Tomcat的依赖。
 
-    ```xml
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-tomcat</artifactId>
-        <version>1.5.8.RELEASE</version>
-        <scope>provided</scope>
-    </dependency>
-    ```
+```xml
+<dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+</dependency> 
+<!--引入这个依赖后，下面那个就已经自动引入了	-->
+```
 
-	2. 修改tomcat的配置，如port，在main/resources/application.properties中配置
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-tomcat</artifactId>
+    <version>1.5.8.RELEASE</version>
+    <scope>provided</scope>
+</dependency>
+```
 
-    ```properties
-    ## 容器端口号，默认8080
-    server.port=8280
-    ## 上下文路径，默认/    
-    server.servlet.context-path=/demo
-    ## tomcat编码，默认UTF-8
-    server.tomcat.uri-encoding=UTF-8
-    ```
+- 修改tomcat的配置，如port，在main/resources/application.properties中配置
 
-	3. 新建一个 DemoController
+```properties
+## 容器端口号，默认8080
+server.port=8280
+## 上下文路径，默认/    
+server.servlet.context-path=/demo
+## tomcat编码，默认UTF-8
+server.tomcat.uri-encoding=UTF-8
+```
 
-    ```java
-    @RestController
-    @RequestMapping("/index")  // 访问的文件名，index
-    public class DemoController {
-    
-        @GetMapping
-        public List<Map<String, String>> get(){
-            List<Map<String, String>> demos = new ArrayList<>();
-            Map<String, String > demo1 = new HashMap<>();
-            demo1.put("roach", "小强");
-            demo1.put("crow", "乌鸦");
-            demos.add(demo1);
-    
-            Map<String, String> demo2 = new HashMap<>();
-            demo2.put("lion", "狮子");
-            demo2.put("tiger", "老虎");
-            demos.add(demo2);
-    
-            return demos;
-        }
+- 新建一个 DemoController
+
+```java
+@RestController
+@RequestMapping("/index")  // 访问的文件名，index
+public class DemoController {
+
+    @GetMapping
+    public List<Map<String, String>> get(){
+        List<Map<String, String>> demos = new ArrayList<>();
+        Map<String, String > demo1 = new HashMap<>();
+        demo1.put("roach", "小强");
+        demo1.put("crow", "乌鸦");
+        demos.add(demo1);
+
+        Map<String, String> demo2 = new HashMap<>();
+        demo2.put("lion", "狮子");
+        demo2.put("tiger", "老虎");
+        demos.add(demo2);
+
+        return demos;
     }
-    
-    ```
+}
 
-	4. 然后运行 项目，在浏览器输入 http://localhost:8280/demo/index  就有结果了。
+```
+
+- 然后运行 项目，在浏览器输入 http://localhost:8280/demo/index  就有结果了。
 
 ##### 使用外置Tomcat步骤：
 
@@ -897,17 +897,18 @@ localhost:8088/uploadFile  会报错，404
     
     ```
 
-    2. 在 MyMvcConfig 里的 addViewController映射访问页面
+    2.在 MyMvcConfig 里的 addViewController映射访问页面
 
     ```java
     registry.addViewController("/converter").setViewName("converter");
     // converter.html 就放在templates目录下，所以路径是 converter
     ```
 
-    3. 配置 HTTPMessageConverter 的Bean，有两种方法：（MyMvcConfig 实现了 WebMvcConfigure）
+    3.配置 HTTPMessageConverter 的Bean，有两种方法：（MyMvcConfig 实现了 WebMvcConfigure）
 
-    1. 在 MyMvcConfig 重写configureMessageConverters ： 会覆盖掉 Spring MVC 默认注册的多个 HTTPMessageConverter
-    2. 在 MyMvcConfig 里面重写 extendMessageConverts: 仅添加一个自定义的 HttpMessageConverter ，不会覆盖默认的 HTTPMessageConverter
+    4.在 MyMvcConfig 重写configureMessageConverters ： 会覆盖掉 Spring MVC 默认注册的多个 HTTPMessageConverter
+
+    5. 在 MyMvcConfig 里面重写 extendMessageConverts: 仅添加一个自定义的 HttpMessageConverter ，不会覆盖默认的 HTTPMessageConverter
 
     ```java
     @Override
@@ -1002,7 +1003,7 @@ localhost:8088/uploadFile  会报错，404
 
 一.SSE	
 
- 	1. 控制演示器
+1.控制演示器
 
 ```java
 package com.example.springmvc.sse;
@@ -1037,7 +1038,7 @@ public class SseController {
 }
 ```
 
-2. 演示界面，新建sse.html 
+2.演示界面，新建sse.html 
 
 ```html
 <!DOCTYPE html>
@@ -1087,7 +1088,7 @@ public class SseController {
 
 二. Servlet3.0+异步方法处理
 
- 	1. 写好定时任务作为发送的服务
+1.写好定时任务作为发送的服务
 
 ```java
 package com.example.springmvc.sse;
@@ -1132,7 +1133,7 @@ public class PushService {
 }
 ```
 
-2. 写Async 的控制器
+2.写Async 的控制器
 
 ```java
 package com.example.springmvc.sse;
@@ -1165,7 +1166,7 @@ public class AsyncController {
 
 ```
 
-3. 再写完async.html在templates/sse问件夹下。
+3.再写完async.html在templates/sse问件夹下。
 
 ```html
 <!DOCTYPE html>
@@ -1200,11 +1201,11 @@ public class AsyncController {
 </html>
 ```
 
-4. 在MyMvcConfig.addViewController里增加
+4.在MyMvcConfig.addViewController里增加
 
 `registry.addViewController("/async").setViewName("sse/async");`
 
-5. 运行后 在浏览器输入 ，localhost:8088/async
+5.运行后 在浏览器输入 ，localhost:8088/async
 
 ---
 

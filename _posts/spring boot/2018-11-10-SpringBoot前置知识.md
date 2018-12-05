@@ -295,7 +295,9 @@ public class JavaConfig {
 **代理模式**：为其他对象提供一种代理以控制当前对象的访问：![代理示意图](https://github.com/MrAlan/MyPostPicture/blob/master/6.png?raw=true)<br>
 实际上有三种代理模式：
 
-1. **静态代理** 使用时需要定义接口，或者父类，被代理对象与代理对象Proxy 一起实现接口或继承。*这样便于管理，如果没有实现同一个接口，事实上也是可以的，不过实践证明实现同一个接口的代理更好用。* (上面斜体部分是个人猜测)
+1.**静态代理** 使用时需要定义接口，或者父类，被代理对象与代理对象Proxy 一起实现接口或继承。*这样便于管理，如果没有实现同一个接口，事实上也是可以的，不过实践证明实现同一个接口的代理更好用。* (上面斜体部分是个人猜测)
+
+
 ```java
 public interface A{
     void test();
@@ -328,9 +330,12 @@ public class Main{
 }
 
 ```
+
 **虽然可以不修改目标对象，就可以进行功能拓展，但是代理对象一样要实现目标对象的接口，也很麻烦,而且一旦接口改了，代理对象与目标对象都要进行更改**
 
-2. **动态代理(JDK代理)**： 代理对象不需要实现接口 ，代理对象的生产是用的JDK的API，动态的在内存中创建代理对象，也叫接口代理。代理类所在的包 **java.lang.reflect.Proxy** 。JDK实现代理只需要调用下面这个方法<br>*newProxyInstance(ClassLoader loder,Class<?>[]interfaces,InvocationHandler h)*
+2.**动态代理(JDK代理)**： 代理对象不需要实现接口 ，代理对象的生产是用的JDK的API，动态的在内存中创建代理对象，也叫接口代理。代理类所在的包 **java.lang.reflect.Proxy** 。JDK实现代理只需要调用下面这个方法
+
+*newProxyInstance(ClassLoader loder,Class<?>[]interfaces,InvocationHandler h)*
 
 ClassLoader loader 指定目标对象使用类加载器
 Class<?> interfaces 目标对象实现的接口类型，使用泛型方式来确认类型
@@ -377,9 +382,12 @@ public class Main{
 //调用新实例的方法，在此例中为 test() 即原InvocationHandler.invoke()方法
 
 ```
+
 **注意 ：目标对象一定要实现接口，不然不能动态代理,这是由于JDK内部实现方式决定的，具体就不细究了**
 
-3. **Cglib代理** 之前的两种代理都要求目标对象是实现了接口的，而Cglib代理原理是对目标类生成一个子类，并覆盖其中方法实现增强，但由于采用的继承不能用*final*修饰的类代理，因为final修饰的类是不可继承的。
+3.**Cglib代理** 之前的两种代理都要求目标对象是实现了接口的，而Cglib代理原理是对目标类生成一个子类，并覆盖其中方法实现增强，但由于采用的继承不能用*final*修饰的类代理，因为final修饰的类是不可继承的。
+
+
 ```java
 public class C{
     public void print(){
@@ -417,6 +425,7 @@ public class Main{
 }
 
 ```
+
 **Cglib子类代理实现方法**
 1. 需要引入cglib的jar文件，但是Spring核心包中已经有了Cglib功能，所以直接引入Spring-core.jar即可
 2. 引入功能包之后，在内存中动态构建子类，代理类不能为final
@@ -432,8 +441,8 @@ public class Main{
 [AOP](#aop)
 ---
 
----
 为什么在前面介绍代理呢？ 因为 AOP的实质是对代理模式的应用
+
 **下面一段参考自** http://www.cnblogs.com/xrq730/p/4919025.html <br>
 
 日常编程中完成某个业务中写了一堆代码，最后优化的时候发现就两句代码真正完成了业务，其他代码业务相关程度不高只是为了配置核心业务所需的环境。这种代码我们可以抽象成一个工具类。更抽象一点，各个业务模块的功能组件中除了完成相关业务功能外都有涉及日志，事务，安全控制等额外的操作等。这些模块并不是核心功能却又不可或缺。
