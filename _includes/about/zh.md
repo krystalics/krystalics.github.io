@@ -1,31 +1,11 @@
-> 写写代码，做做设计，  
-> 离开世界之前，一切都是过程。
+> 写点东西，记录一下大学还算刻苦的生活
 
-Hey，我是黄玄，病毒种，进化程度不明，多出没于[博客](https://huangxuan.me)、[微博](weibo.com/huxpro)、[知乎](https://www.zhihu.com/people/huxpro/pins/posts)、[Twitter](https://twitter.com/Huxpro/)、[Github](http://github.com/huxpro)、[Medium](https://medium.com/@Huxpro) 等地带，绝招尚在开发中。
+​	hey ， 我是林家宝，一个普通的在校大学生。学校还算可以(武汉理工大学)，这可能是我大学四年来比较值得称道的一件事了。大三一开始我就准备要开始为找工作做打算了，可是大学的慵懒生活让我始终紧凑不起来。直到一个多月前(2018.10月下旬)，我才意识到没有时间了。于是急忙看了几本书，刷了几道题。补充着我在网上看到的一些，JAVA后端应该懂的东西。感觉基础还不错，所以吸收新东西还挺快的。(在这里又要介绍一下，我的绩点是3.79还不错处在班上第9位，综测稍微差点第12位)。
 
-职业是软件工程师，[Web 工会](https://medium.com/ben-and-dion/team-web-3315aa447fb2#.359a9c6cl)活跃成员。目前在 [Facebook](https://www.facebook.com/) 写 [Reason](https://reasonml.github.io/) 与 [Messenger.com](http://messenger.com/) ，曾被招募为淘宝网 · [阿里旅行](http://alitrip.com)前端工程师、微影时代 · [微票儿](http://www.wepiao.com/?r=movie)前端基础工程团队负责人、[饿了么](https://ele.me/) · 大前端团队 · [PWA 顾问](https://medium.com/elemefe/upgrading-ele-me-to-progressive-web-app-2a446832e509)。
+​	为什么会觉得没时间呢？因为我原本是想着先在明年2，3月份能够找到实习。可是发现我什么都不会，于是为了武装自己，只能摆脱安稳悠闲的生活，开始不断地在课间看书，看文章。
 
-一些作品和开源软件项目，👉 戳 [Portfolio](/portfolio)、[Github](http://github.com/huxpro)、[演说.io](https://zhuanlan.zhihu.com/p/21280918)。 
+​	现在是2018.12.05 。昨天班群里发的Bytecode实习招聘对我来说比较有挑战，因为我还没有准备好(本来是打算，寒假在家里也努力一把)，但是还是要好好准备。所以我急忙找了模板，建了这个博客，里面记录了我这几个月来看的内容，有些是书籍本身的内容，但是我加进了我一开始没看懂，后来查阅资料才明白的东西。
 
+​	代码在github中 [springboot实战代码](https://github.com/Krystalics/springboot) 。很多和书上不一样，因为现在spring boot的版本已经是2.1.0+RELEASE了，书上的版本有些内容已经descripted了。是我在查阅其他资料后补充进去的，效果与书上基本一致。
 
-##### Talks
-
-- [Upgrading to Progressive Web Apps][9] · [JSConf CN 上海 2017](http://2017.jsconf.cn/)
-- Building Progressive Web Apps · [CSDI 广州 2017](http://www.csdisummit.com/)
-- The State of Progressive Web App · GDG IO Redux 北京 2017
-- 炒冷饭 · PWA 到底是个什么玩意？· Baidu HQ 北京 2017
-- [Service Worker 101][5] · GDG DevFest 北京 2016
-- [Progressive Web App，复兴序章][4] · [QCon 上海 2016](http://2016.qconshanghai.com/presentation/3111)
-- Progressive Web App 之我见 · GDG IO Redux 北京 2016
-- [CSS Still Sucks 2015][2] · 2015
-- [JavaScript 模块化七日谈][1] · 2015
-
-[1]: //huangxuan.me/2015/07/09/js-module-7day/
-[2]: //huangxuan.me/2015/12/28/css-sucks-2015/
-[3]: //huangxuan.me/2016/06/05/pwa-in-my-pov/
-[4]: //huangxuan.me/2016/10/20/pwa-qcon2016/
-[5]: //huangxuan.me/2016/11/20/sw-101-gdgdf/
-[6]: https://yanshuo.io/assets/player/?deck=58ac8598b123db0067292f92 "PWA Rehashing"
-[7]: https://yanshuo.io/assets/player/?deck=593ad6fbfe88c2006a0a0d6d "The State of PWA"
-[8]: https://yanshuo.io/assets/player/?deck=594d673d570c357d0698a950 "Building PWA"
-[9]: //huangxuan.me/jsconfcn2017/
+​	
