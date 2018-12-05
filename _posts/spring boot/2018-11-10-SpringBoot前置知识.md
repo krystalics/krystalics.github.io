@@ -48,6 +48,7 @@ public class A{
 >- ElementType.TYPE 可以给一个类型进行注解，比如类、接口、枚举
 
 4. @Inherited ：如果一个超类被 @Inherited 注解过的注解进行注解的话，那么如果它的子类没有被任何注解应用的话，那么这个子类就继承了超类的注解。
+
 ```java
 @Inherited
 @Retention(RetentionPolicy.RUNTIME)
