@@ -60,7 +60,10 @@ public class A {}
 
 public class B extends A {}  //B就继承了 Test注解 
 ```
+
+
 5. @Repeatable 让注解可重复在一个类上使用
+
 ```java
 @interface Persons {
     Person[]  value();
