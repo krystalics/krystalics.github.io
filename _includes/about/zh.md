@@ -6,6 +6,6 @@
 
 ​	现在是2018.12.05 。昨天班群里发的Bytecode实习招聘对我来说比较有挑战，因为我还没有准备好(本来是打算，寒假在家里也努力一把)，但是还是要好好准备。所以我急忙找了模板，建了这个博客，里面记录了我这几个月来看的内容，有些是书籍本身的内容，但是我加进了我一开始没看懂，后来查阅资料才明白的东西。
 
-​	代码在github中 [springboot实战代码](https://github.com/Krystalics/springboot) 。很多和书上不一样，因为现在spring boot的版本已经是2.1.0+RELEASE了，书上的版本有些内容已经descripted了。是我在查阅其他资料后补充进去的，效果与书上基本一致。
+​	代码在github中 [springboot实战代码](https://github.com/Krystalics/springboot) 。很多和书上不一样，因为现在spring boot的版本已经是2.1.0+RELEASE了，书上的版本有些内容已经deprecated 了。是我在查阅其他资料后补充进去的，效果与书上基本一致。
 
 ​	
