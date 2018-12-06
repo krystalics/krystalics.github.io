@@ -155,7 +155,7 @@ spring.datasource.url=jdbc:mysql://localhost:3306/db_example？serverTimezone=GM
 
 ​	Spring Data JPA 是基于Spring Data的repository之上，可以将repository自动输出为REST资源。目前Spring Data REST支持将Spring Data JPA，Spring Data MongoDB，等的repository自动转为REST服务。
 
-至于什么是REST，请查看我的另一篇文章：<a href="https://krystalics.github.io/2018/12/03/About-Rest/">About Rest</a>
+至于什么是REST，请查看我的另一篇文章：<a href="https://krystalics.github.io/2018/12/03/About-REST/">About Rest</a>
 
 **Spring MVC中配置使用Spring Data REST** 与Spring Boot中使用方式一致
 
