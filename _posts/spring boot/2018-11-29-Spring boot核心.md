@@ -1,3 +1,24 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [第六章：Spring Boot 核心](#%E7%AC%AC%E5%85%AD%E7%AB%A0spring-boot-%E6%A0%B8%E5%BF%83)
+  - [6.1 基本配置](#61-%E5%9F%BA%E6%9C%AC%E9%85%8D%E7%BD%AE)
+    - [6.1.1 入口类和@SpringBootApplication](#611-%E5%85%A5%E5%8F%A3%E7%B1%BB%E5%92%8Cspringbootapplication)
+    - [6.1.2 关闭特定的自动配置](#612-%E5%85%B3%E9%97%AD%E7%89%B9%E5%AE%9A%E7%9A%84%E8%87%AA%E5%8A%A8%E9%85%8D%E7%BD%AE)
+    - [6.1.3 修改Banner](#613-%E4%BF%AE%E6%94%B9banner)
+    - [6.1.4 Spring Boot 的配置文件](#614-spring-boot-%E7%9A%84%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6)
+    - [6.1.5 starter pom](#615-starter-pom)
+    - [6.1.6 使用xml配置](#616-%E4%BD%BF%E7%94%A8xml%E9%85%8D%E7%BD%AE)
+  - [6.2 外部配置](#62-%E5%A4%96%E9%83%A8%E9%85%8D%E7%BD%AE)
+    - [6.2.1 命令行参数配置](#621-%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%8F%82%E6%95%B0%E9%85%8D%E7%BD%AE)
+    - [6.2.2 使用properties文件的属性](#622-%E4%BD%BF%E7%94%A8properties%E6%96%87%E4%BB%B6%E7%9A%84%E5%B1%9E%E6%80%A7)
+  - [6.3 日志配置](#63-%E6%97%A5%E5%BF%97%E9%85%8D%E7%BD%AE)
+  - [6.4 Profile配置](#64-profile%E9%85%8D%E7%BD%AE)
+  - [6.5 Spring Boot运行原理](#65-spring-boot%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 *《Spring Boot实战》汪云飞著*
 
 ---

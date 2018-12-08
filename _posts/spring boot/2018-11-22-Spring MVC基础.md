@@ -1,10 +1,34 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [<a name="gaishu">Spring MVC概述</a>](#a-namegaishuspring-mvc%E6%A6%82%E8%BF%B0a)
+- [<a name="xiangmu">Spring MVC项目快速搭建—Tomcat</a>](#a-namexiangmuspring-mvc%E9%A1%B9%E7%9B%AE%E5%BF%AB%E9%80%9F%E6%90%AD%E5%BB%BAtomcata)
+  - [Tomcat结构目录：](#tomcat%E7%BB%93%E6%9E%84%E7%9B%AE%E5%BD%95)
+  - [有两种方法来配置虚拟目录：](#%E6%9C%89%E4%B8%A4%E7%A7%8D%E6%96%B9%E6%B3%95%E6%9D%A5%E9%85%8D%E7%BD%AE%E8%99%9A%E6%8B%9F%E7%9B%AE%E5%BD%95)
+  - [配置虚拟主机：](#%E9%85%8D%E7%BD%AE%E8%99%9A%E6%8B%9F%E4%B8%BB%E6%9C%BA)
+  - [使用内置Tomcat步骤：](#%E4%BD%BF%E7%94%A8%E5%86%85%E7%BD%AEtomcat%E6%AD%A5%E9%AA%A4)
+  - [使用外置Tomcat步骤：](#%E4%BD%BF%E7%94%A8%E5%A4%96%E7%BD%AEtomcat%E6%AD%A5%E9%AA%A4)
+  - [内外Tomcat都可以：](#%E5%86%85%E5%A4%96tomcat%E9%83%BD%E5%8F%AF%E4%BB%A5)
+- [<a name="changyong">Spring MVC常用注解</a>](#a-namechangyongspring-mvc%E5%B8%B8%E7%94%A8%E6%B3%A8%E8%A7%A3a)
+- [<a name="jiben">Spring MVC基本配置</a>](#a-namejibenspring-mvc%E5%9F%BA%E6%9C%AC%E9%85%8D%E7%BD%AEa)
+  - [4.4.1 **静态资源映射**](#441-%E9%9D%99%E6%80%81%E8%B5%84%E6%BA%90%E6%98%A0%E5%B0%84)
+  - [4.4.2 拦截器配置](#442-%E6%8B%A6%E6%88%AA%E5%99%A8%E9%85%8D%E7%BD%AE)
+  - [4.4.3 @ControllerAdvice](#443-controlleradvice)
+  - [4.4.4 其他配置](#444-%E5%85%B6%E4%BB%96%E9%85%8D%E7%BD%AE)
+- [<a name="gaoji">Spring MVC高级配置</a>](#a-namegaojispring-mvc%E9%AB%98%E7%BA%A7%E9%85%8D%E7%BD%AEa)
+  - [4.5.1 文件上传配置](#451-%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0%E9%85%8D%E7%BD%AE)
+  - [4.5.2 自定义HttpMessageConverter](#452-%E8%87%AA%E5%AE%9A%E4%B9%89httpmessageconverter)
+  - [4.5.3 服务器推送技术](#453-%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%8E%A8%E9%80%81%E6%8A%80%E6%9C%AF)
+- [<a name="ceshi">Spring MVC测试</a>](#a-nameceshispring-mvc%E6%B5%8B%E8%AF%95a)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 
 
 《springboot 实战》汪云飞编著*
 
-第四章 Spring MVC
-
-[TOC]
+### 第四章 Spring MVC
 
 ---
 

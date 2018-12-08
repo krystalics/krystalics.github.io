@@ -1,3 +1,11 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [REST的优点](#rest%E7%9A%84%E4%BC%98%E7%82%B9)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 [以下一部分来自维基百科：](https://zh.wikipedia.org/wiki/%E8%A1%A8%E7%8E%B0%E5%B1%82%E7%8A%B6%E6%80%81%E8%BD%AC%E6%8D%A2)
 
 REST(Representational State Transfer，表现层状态转换)是Roy Thomas Fielding博士于2000年在他的博士论文中提出的一种互联网规范。目的是便于不同软件/程序再网络(如：互联网)中互相传递信息。匹配或者兼容这种架构风格的简称为Rest或Restful网络服务，允许客户端发出URI访问和操作网络资源的请求，而与预先定义好的无状态操作集一致化。

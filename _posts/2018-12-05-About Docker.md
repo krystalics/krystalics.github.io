@@ -1,3 +1,11 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Docker的安装](#docker%E7%9A%84%E5%AE%89%E8%A3%85)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 记得老师上课说过：“Docker是互联网这几年唯一一个有重大突破的技术” 。它是个轻量级的容器技术，类似于虚拟机技术(xen,kvm,vmware,virtual)。Docker是直接运行在linux系统上的，并不是像虚拟机一样模拟计算机硬件再重新建立一个系统，所以它的开销远比虚拟机要小，性能也是远远高于虚拟机。
 
 ​	Docker支持将软件编译成一个镜像(image)，在这个镜像里做好对软件的各种配置，然后发布这个镜像，使用者运行这个镜像，运行中的镜像称之为容器(container，像是 **类 和对象的关系**)，容器的启动是非常快的，一般以秒为单位。

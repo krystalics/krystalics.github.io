@@ -1,3 +1,26 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [第八章 ——Spring Boot 的数据访问](#%E7%AC%AC%E5%85%AB%E7%AB%A0-spring-boot-%E7%9A%84%E6%95%B0%E6%8D%AE%E8%AE%BF%E9%97%AE)
+  - [8.1 Docker 引入](#81-docker-%E5%BC%95%E5%85%A5)
+  - [8.2 Spring Data JPA](#82-spring-data-jpa)
+    - [8.2.1 点睛](#821-%E7%82%B9%E7%9D%9B)
+  - [8.2.3 实战](#823-%E5%AE%9E%E6%88%98)
+  - [8.3 Spring Data REST](#83-spring-data-rest)
+    - [8.3.1 点睛 Spring Data REST](#831-%E7%82%B9%E7%9D%9B-spring-data-rest)
+    - [8.3.2 Spring Boot的支持](#832-spring-boot%E7%9A%84%E6%94%AF%E6%8C%81)
+  - [8.4 声明式事务](#84-%E5%A3%B0%E6%98%8E%E5%BC%8F%E4%BA%8B%E5%8A%A1)
+    - [8.4.1 Spring 的事务机制](#841-spring-%E7%9A%84%E4%BA%8B%E5%8A%A1%E6%9C%BA%E5%88%B6)
+    - [8.4.2声明式事务](#842%E5%A3%B0%E6%98%8E%E5%BC%8F%E4%BA%8B%E5%8A%A1)
+    - [8.4.3 注解事务行为](#843-%E6%B3%A8%E8%A7%A3%E4%BA%8B%E5%8A%A1%E8%A1%8C%E4%B8%BA)
+    - [8.4.4 Spring Data JPA的事务支持](#844-spring-data-jpa%E7%9A%84%E4%BA%8B%E5%8A%A1%E6%94%AF%E6%8C%81)
+    - [8.4.5 自动开启注解事务的支持](#845-%E8%87%AA%E5%8A%A8%E5%BC%80%E5%90%AF%E6%B3%A8%E8%A7%A3%E4%BA%8B%E5%8A%A1%E7%9A%84%E6%94%AF%E6%8C%81)
+    - [8.4.6 实战](#846-%E5%AE%9E%E6%88%98)
+  - [8.5 数据缓存](#85-%E6%95%B0%E6%8D%AE%E7%BC%93%E5%AD%98)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 *《Spring Boot实战》汪云飞*
 
 ---

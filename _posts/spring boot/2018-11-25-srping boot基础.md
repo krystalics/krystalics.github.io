@@ -1,8 +1,20 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [第五章：Spring Boot 基础](#%E7%AC%AC%E4%BA%94%E7%AB%A0spring-boot-%E5%9F%BA%E7%A1%80)
+  - [5.1 Spring Boot 概述](#51-spring-boot-%E6%A6%82%E8%BF%B0)
+    - [5.1.1 什么是Spring Boot](#511-%E4%BB%80%E4%B9%88%E6%98%AFspring-boot)
+    - [5.1.2 Spring Boot 核心功能](#512-spring-boot-%E6%A0%B8%E5%BF%83%E5%8A%9F%E8%83%BD)
+    - [5.1.3 Spring Boot 的优点](#513-spring-boot-%E7%9A%84%E4%BC%98%E7%82%B9)
+    - [5.1.4 关于本书的Spring Boot版本](#514-%E5%85%B3%E4%BA%8E%E6%9C%AC%E4%B9%A6%E7%9A%84spring-boot%E7%89%88%E6%9C%AC)
+    - [5.x.x 这本书第五章的后面内容](#5xx-%E8%BF%99%E6%9C%AC%E4%B9%A6%E7%AC%AC%E4%BA%94%E7%AB%A0%E7%9A%84%E5%90%8E%E9%9D%A2%E5%86%85%E5%AE%B9)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 *《springboot 实战》 汪云飞*
 
 ### 第五章：Spring Boot 基础
-
-[TOC]
 
 ---
 

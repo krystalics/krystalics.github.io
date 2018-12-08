@@ -1,8 +1,34 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [第七章：Spring Boot 的Web开发](#%E7%AC%AC%E4%B8%83%E7%AB%A0spring-boot-%E7%9A%84web%E5%BC%80%E5%8F%91)
+  - [7.1 Spring Boot 的Web开发支持](#71-spring-boot-%E7%9A%84web%E5%BC%80%E5%8F%91%E6%94%AF%E6%8C%81)
+  - [7.2 Thymeleaf模板引擎](#72-thymeleaf%E6%A8%A1%E6%9D%BF%E5%BC%95%E6%93%8E)
+    - [7.2.1 Thymeleaf的基础知识](#721-thymeleaf%E7%9A%84%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86)
+  - [7.2.2与7.2.3跳过](#722%E4%B8%8E723%E8%B7%B3%E8%BF%87)
+  - [7.2.4 实战](#724-%E5%AE%9E%E6%88%98)
+  - [7.3 Web相关配置](#73-web%E7%9B%B8%E5%85%B3%E9%85%8D%E7%BD%AE)
+    - [7.3.1 Spring Boot 提供的自动配置](#731-spring-boot-%E6%8F%90%E4%BE%9B%E7%9A%84%E8%87%AA%E5%8A%A8%E9%85%8D%E7%BD%AE)
+  - [7.3.2 接管Spring Boot 的Web配置](#732-%E6%8E%A5%E7%AE%A1spring-boot-%E7%9A%84web%E9%85%8D%E7%BD%AE)
+  - [7.3.3 注册Servlet，Filter，Listener](#733-%E6%B3%A8%E5%86%8Cservletfilterlistener)
+  - [7.4 Tomcat配置](#74-tomcat%E9%85%8D%E7%BD%AE)
+    - [7.4.3 替换Tomcat](#743-%E6%9B%BF%E6%8D%A2tomcat)
+    - [7.4.4 SSL配置](#744-ssl%E9%85%8D%E7%BD%AE)
+  - [**书中的操作好像过时了，所以照着这里来就可以**：springboot 2 HTTP转HTTPS还有用https访问的](#%E4%B9%A6%E4%B8%AD%E7%9A%84%E6%93%8D%E4%BD%9C%E5%A5%BD%E5%83%8F%E8%BF%87%E6%97%B6%E4%BA%86%E6%89%80%E4%BB%A5%E7%85%A7%E7%9D%80%E8%BF%99%E9%87%8C%E6%9D%A5%E5%B0%B1%E5%8F%AF%E4%BB%A5springboot-2-http%E8%BD%AChttps%E8%BF%98%E6%9C%89%E7%94%A8https%E8%AE%BF%E9%97%AE%E7%9A%84)
+  - [7.5 Favicon配置：](#75-favicon%E9%85%8D%E7%BD%AE)
+  - [7.6 WebSocket](#76-websocket)
+    - [7.6.1 什么是WebSocket](#761-%E4%BB%80%E4%B9%88%E6%98%AFwebsocket)
+    - [7.6.2 实战](#762-%E5%AE%9E%E6%88%98)
+  - [7.7 基于Bootstrap和 AugularJs（Vue） 的现代Web应用](#77-%E5%9F%BA%E4%BA%8Ebootstrap%E5%92%8C-augularjsvue-%E7%9A%84%E7%8E%B0%E4%BB%A3web%E5%BA%94%E7%94%A8)
+    - [7.7.1 Bootstrap](#771-bootstrap)
+    - [7.7.2 AugularJS](#772-augularjs)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 《Spring Boot 实战》汪云飞*
 
 ---
-
-[TOC]
 
 ### 第七章：Spring Boot 的Web开发
 

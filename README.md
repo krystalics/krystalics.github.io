@@ -1,3 +1,14 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Hux Blog](#hux-blog)
+    - [View Live Hux Blog &rarr;](#view-live-hux-blog-rarr)
+    - [这个项目是git自 Hux Blog](#%E8%BF%99%E4%B8%AA%E9%A1%B9%E7%9B%AE%E6%98%AFgit%E8%87%AA-hux-blog)
+  - [License](#license)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Hux Blog
 
 ### [View Live Hux Blog &rarr;](https://huangxuan.me)
