@@ -60,9 +60,13 @@ kramdown:
 # Disqus settings  这里填我们在disqus中注册的账号 但是它被墙了
 # disqus_username: krystalics
 
-# Netease settings
-netease_comment: true
+# Netease settings 也不能用了
+# netease_comment: true
 
+# Vline据说可以用
+vline_comment: true 
+appID: onRjFdkM9Uot7FB9sebXDaYF-gzGzoHsz
+appKey: le31JEolguqU89wMxapsxIrD
 
 
 # Analytics settings

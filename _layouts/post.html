@@ -65,6 +65,11 @@ layout: default
                 <div id="cloud-tie-wrapper" class="cloud-tie-wrapper"></div>
                 <!-- 网易云跟帖 评论框 end -->
                 {% endif %}
+
+                {% if site.vline_comment %}
+                <!-- Vline 的评论框 -->
+                <div id="vcomments"></div>
+                {% endif %}
             </div>  
 
     <!-- Side Catalog Container -->
@@ -139,6 +144,16 @@ layout: default
 <!-- disqus 公共JS代码 end -->
 {% endif %}
 
+{% if site.vline_comment %}
+<!-- Vline 公共JS代码 -->
+<script>
+    new Valine({
+        el: '#vcomments',
+        appId: '{{site.appID}}',
+        appKey: '{{site.appKey}}'
+    })
+</script>
+{% endif %}
 
 {% if site.anchorjs %}
 <!-- async load function -->
