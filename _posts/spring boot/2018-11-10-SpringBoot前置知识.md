@@ -3,12 +3,6 @@
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
   - [有关于前面的配置像Maven，IDEA ULtimate 版的就不细说了。这属于基础的东西。这篇文章就从我不懂的地方说起吧。](#%E6%9C%89%E5%85%B3%E4%BA%8E%E5%89%8D%E9%9D%A2%E7%9A%84%E9%85%8D%E7%BD%AE%E5%83%8Fmavenidea-ultimate-%E7%89%88%E7%9A%84%E5%B0%B1%E4%B8%8D%E7%BB%86%E8%AF%B4%E4%BA%86%E8%BF%99%E5%B1%9E%E4%BA%8E%E5%9F%BA%E7%A1%80%E7%9A%84%E4%B8%9C%E8%A5%BF%E8%BF%99%E7%AF%87%E6%96%87%E7%AB%A0%E5%B0%B1%E4%BB%8E%E6%88%91%E4%B8%8D%E6%87%82%E7%9A%84%E5%9C%B0%E6%96%B9%E8%AF%B4%E8%B5%B7%E5%90%A7)
-  - [0. <a href="#zhujie">注解</a>](#0-a-hrefzhujie%E6%B3%A8%E8%A7%A3a)
-  - [1. <a href="#di"> DI与IoC</a>](#1-a-hrefdi-di%E4%B8%8Eioca)
-  - [2. <a href="#spring">Spring与Spring容器</a>](#2-a-hrefspringspring%E4%B8%8Espring%E5%AE%B9%E5%99%A8a)
-  - [3. <a href="#java">Java配置与注解有什么异同</a>](#3-a-hrefjavajava%E9%85%8D%E7%BD%AE%E4%B8%8E%E6%B3%A8%E8%A7%A3%E6%9C%89%E4%BB%80%E4%B9%88%E5%BC%82%E5%90%8Ca)
-  - [4. <a href="#daili">java代理</a>](#4-a-hrefdailijava%E4%BB%A3%E7%90%86a)
-  - [5. <a href="#aop">AOP</a>](#5-a-hrefaopaopa)
 - [<a name="zhujie">注解</a>](#a-namezhujie%E6%B3%A8%E8%A7%A3a)
 - [<a name="di">依赖注入</a>](#a-namedi%E4%BE%9D%E8%B5%96%E6%B3%A8%E5%85%A5a)
 - [<a name="spring">Spring与Spring容器</a>](#a-namespringspring%E4%B8%8Espring%E5%AE%B9%E5%99%A8a)

@@ -17,7 +17,14 @@
     - [8.4.4 Spring Data JPA的事务支持](#844-spring-data-jpa%E7%9A%84%E4%BA%8B%E5%8A%A1%E6%94%AF%E6%8C%81)
     - [8.4.5 自动开启注解事务的支持](#845-%E8%87%AA%E5%8A%A8%E5%BC%80%E5%90%AF%E6%B3%A8%E8%A7%A3%E4%BA%8B%E5%8A%A1%E7%9A%84%E6%94%AF%E6%8C%81)
     - [8.4.6 实战](#846-%E5%AE%9E%E6%88%98)
-  - [8.5 数据缓存](#85-%E6%95%B0%E6%8D%AE%E7%BC%93%E5%AD%98)
+  - [8.5 数据缓存 Cache](#85-%E6%95%B0%E6%8D%AE%E7%BC%93%E5%AD%98-cache)
+    - [Spring Boot支持下的缓存](#spring-boot%E6%94%AF%E6%8C%81%E4%B8%8B%E7%9A%84%E7%BC%93%E5%AD%98)
+    - [实战](#%E5%AE%9E%E6%88%98)
+    - [更换缓存](#%E6%9B%B4%E6%8D%A2%E7%BC%93%E5%AD%98)
+  - [8.6 非关系型数据库NoSQL](#86-%E9%9D%9E%E5%85%B3%E7%B3%BB%E5%9E%8B%E6%95%B0%E6%8D%AE%E5%BA%93nosql)
+    - [8.6.1 MongoDB](#861-mongodb)
+    - [8.6.2 Redis](#862-redis)
+    - [SpringBoot对Redis的支持](#springboot%E5%AF%B9redis%E7%9A%84%E6%94%AF%E6%8C%81)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -512,4 +519,616 @@ public class TranController {
 
 
 
-#### 8.5 数据缓存
+#### 8.5 数据缓存 Cache
+
+​	当我们知道一个程序的瓶颈在数据库，需要重复获取相同数据的时候，数据缓存起到了重大作用。
+
+Spring 支持CacheManager，针对不同的缓存技术，定义了如下实现
+
+
+
+| CacheManager              | 描述                                                         |
+| ------------------------- | ------------------------------------------------------------ |
+| SimpleCacheManager        | 使用简单的Collection来存储缓存，主要用来测试                 |
+| ConcurrentMapCacheManager | 使用ConcurrentMap来存储缓存                                  |
+| NoOpCacheManager          | 仅用于测试，不做实际缓存                                     |
+| EhCacheCacheManager       | 使用EhCache作为缓存技术                                      |
+| GuavaCacheManager         | 使用Google Guava 的GuavaCache作为缓存技术                    |
+| HazelcastCacheManager     | 使用 Hazelcast作为缓存技术                                   |
+| JCacheCacheManager        | 支持JCache(JSR-107)标准的实现作为缓存技术，如Apache Commons JCS |
+| RedisCacheManager         | 使用Redis作为缓存技术                                        |
+
+在使用任意一个CacheManager的时候都要注册相应的Bean。
+
+```java
+@Bean 
+public EhCacheCacheManager manager(CacheManager m){
+    return new EhCacheCacheManager(m);
+}
+```
+
+当然，每种缓存技术都是有很多的额外配置的，但是CacheManager是必不可少的。
+
+
+
+**声明式缓存注解**
+
+​	Spring 提供4个注解来声明缓存规则(又是使用注解式的AOP的一个生动例子)：而且Spring要开启声明式缓存的支持，就要在配置类里加 @EnableCaching  。
+
+
+
+| 注解        | 解释                                                         |
+| ----------- | ------------------------------------------------------------ |
+| @Cacheable  | 在方法执行前，Spring先查看缓存中是否有数据，如果没有则调用方法并将其存入缓存，有则直接返回缓存数据 |
+| @CachePut   | 无论怎么样都会讲方法的返回值放到缓存中。属性与@Cacheable保持一致 |
+| @CacheEvict | 将一条或多条数据冲缓存中删除                                 |
+| @Caching    | 可以通过@Caching注解这多个注解策略在一个方法上               |
+
+前三个都是有value属性指定要使用的缓存名字，key 属性指定数据在缓存中存储的键。如：
+
+```java
+@Cacheable(value="RedisCacheManager",key="id")
+public...
+```
+
+
+
+##### Spring Boot支持下的缓存
+
+​	springboot自动为我们配置了多个CacheManager的实现。在application.properties中以如下形式配置：只需要引入相关的依赖包和配置类中使用@EnableCaching就可以。
+
+```properties
+spirng.cache.type= 可选redis，generic，ehcache，....
+spring.cache.cache-name=程序启动时创建的缓存名称
+spirng.cache.ehcache.config= ehcache配置文件地址
+spirng.cache.infinispan.config=
+spirng.cache.jcache.config=
+spirng.cache.jcache.provider= 多个jcache实现在类路径中的时候，指定jcache
+```
+
+
+
+##### 实战
+
+​	借用上文的Person和Repository。
+
+- 接口定义
+
+```java
+package com.example.data_ch8.cache;
+
+import com.example.data_ch8.rest.Person;
+
+public interface CacheService {
+  Person save(Person person);
+  void remove(Long id);
+  Person findOne(Person person);
+}
+```
+
+- 实现接口
+
+```java
+package com.example.data_ch8.cache;
+
+import com.example.data_ch8.rest.Person;
+import com.example.data_ch8.rest.PersonRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+
+@Service
+public class CacheServiceImp1 implements CacheService {
+
+  @Autowired
+  PersonRepository personRepository;
+  
+  @Override
+  @CachePut(value = "people",key = "#person.getId()")  //缓存新增或者更新的数据到缓存，名称为people，key是person.id
+  public Person save(Person person) {
+    Person p=personRepository.save(person);
+    System.out.println("为id，key为："+p.getId()+"数据做了缓存");
+    return p;
+  }
+
+  @Override
+  @CacheEvict(value = "people") //从缓存people中删除key为 id的键
+  public void remove(Long id) {
+    System.out.println("删除了id,key为"+id+"的数据缓存");
+    personRepository.deleteById(id);
+  }
+
+  @Override
+  @Cacheable(value = "people",key = "#person.getId()") //缓存key为person.id的键到people中
+  public Person findOne(Person person) {
+    Person p = personRepository.findById(person.getId()).get();
+    System.out.println("为id，key为："+p.getId()+"数据做了缓存");
+    return p;
+  }
+}
+```
+
+- 控制器
+
+```java
+package com.example.data_ch8.cache;
+
+import com.example.data_ch8.rest.Person;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class CacheController {
+  @Autowired
+  CacheService cacheService;
+
+  @RequestMapping("/put")
+  public Person put(Person person){
+    return cacheService.save(person);
+  }
+
+  @RequestMapping("/able")
+  public Person cacheable(Person person){
+    return cacheService.findOne(person);
+  }
+
+  @RequestMapping("/evit")
+  public String evit(Long id){
+    cacheService.remove(id);
+    return "ok";
+  }
+
+}
+```
+
+- 最后在主类或配置类中开启缓存支持，然后运行既可。
+
+
+
+##### 更换缓存
+
+​	只需要将对应依赖包加入到pom.xml中既可。有配置文件的要将其放在类路径下。
+
+
+
+#### 8.6 非关系型数据库NoSQL
+
+​	特点是不使用SQL语言作为查询语言，数据存储也不是固定的表，字段。主要有文档存储型(MongoDB)，图形关系存储型(Neo4j)和键值对存储型(Redis)。本节将演示基于MongoDB的数据访问和就要Redis的数据访问
+
+
+
+##### 8.6.1 MongoDB
+
+​	基于文档的存储型数据库，使用面向对象的思想，每一条数据记录都是文档的对象。
+
+​	spring 对MongoDB的支持是通过Spring Data MongoDB来实现的。也是要开启支持，增加@EnableMongoRepositories 到配置类。还提供了如下功能
+
+- Object/Document 映射注解支持
+
+| 注解      | 描述                            |
+| --------- | ------------------------------- |
+| @Document | 映射领域对象与MongoDB的一个文档 |
+| @Id       | 映射当前属性时Id                |
+| @DbRef    | 当前属性将参考其他文档          |
+| @Field    | 为文档的属性定义名称            |
+| @Version  | 将当前属性作为版本              |
+
+- MongoTemplate
+
+和下面对Redis的支持差不多，先连接MongoClient以及MogoDbFactory
+
+```java
+@Bean
+public MongoClient client()throws UnknownHostException{
+    MongoClient client=new MongoClient(new ServerAddress("127.0.0.1",27017));
+    return client;  //上面设置ip地址和端口
+}
+
+@Bean
+public MongoDbFactory mongodb()throws Exception{
+    String database=new MongoClientURI("mongodb://localhost/test").getDataBase();
+    return new SimpleMongoDbFactory(client(),database); //上面创建一个test数据库
+}
+```
+
+- Repository的支持
+
+```java
+public interface PersonRepository extends MongoRepository<Person,String>{}
+```
+
+
+
+**Spring Boot 的支持**
+
+​	application.properties中的配置如下
+
+```properties
+spring.data.mongodb.host= #默认为localhost
+spring.data.mongodb.port=27017 #默认
+spring.data.mongodb.url=mongodb://localhost/test #连接URL
+spring.data.mongodb.database=
+spring.data.mongodb.authentication-database=
+spring.data.mongodb.grid-fs-database=
+spring.data.mongodb.username=
+spring.data.mongodb.password=
+spring.data.mongodb.repositories.enabled=true #默认是开启的
+... 
+```
+
+- 安装MongoDB
+
+- 引入spring-boot-starter-data-mongodb依赖
+
+- 建立领域模型，Teacher，包含工作过的地点Location
+
+```java
+package com.example.data_ch8.mongo;
+
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+
+@Document //注解映射领域模型和 MongoDB文档
+public class Teacher {
+  @Id //表明这个属性时文档的id
+  private String id;
+  private String name;
+  private int age;
+
+  @Field("locs") //此属性在文档中名为 locs ，locations属性将以数组形式存在当前数据记录中
+  private Collection<Location> locations=new LinkedHashSet<>();
+
+  public Teacher(String name,int age){
+    this.name=name;
+    this.age=age;
+  }
+
+  public String getId() {
+    return id;
+  }
+
+  public void setId(String id) {
+    this.id = id;
+  }
+
+  public Collection<Location> getLocations() {
+    return locations;
+  }
+
+  public void setLocations(Collection<Location> locations) {
+    this.locations = locations;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public int getAge() {
+    return age;
+  }
+
+  public void setAge(int age) {
+    this.age = age;
+  }
+}
+```
+
+```java
+package com.example.data_ch8.mongo;
+
+public class Location {
+
+  private String place;
+  private String year;
+
+  public Location(String place, String year) {
+    this.place = place;
+    this.year = year;
+  }
+
+  public String getPlace() {
+    return place;
+  }
+
+  public void setPlace(String place) {
+    this.place = place;
+  }
+
+  public String getYear() {
+    return year;
+  }
+
+  public void setYear(String year) {
+    this.year = year;
+  }
+}
+```
+
+- 数据访问接口
+
+```
+package com.example.data_ch8.mongo;
+
+import java.util.List;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+
+public interface TeacherRepository extends MongoRepository<Teacher, String> {
+
+  Teacher findByName(String name);  //支持方法名查询
+
+  @Query("{'age':?0}") //支持@Query查询，查询参数构造JSON字符串即可
+  List<Teacher> withQueryFindByAge(int age);
+}
+```
+
+- 控制器
+
+```java
+package com.example.data_ch8.mongo;
+
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class TeacherContorller {
+  @Autowired
+  TeacherRepository teacherRepository;
+
+  @RequestMapping("/save")
+  public Teacher save(){
+    Teacher t=new Teacher("ljb",32);
+
+    Collection<Location> locations=new LinkedHashSet<>();
+    Location loc1=new Location("上海","2009");
+    Location loc2=new Location("合肥","2014");
+    Location loc3=new Location("广州","2015");
+    Location loc4=new Location("马鞍山","2016");
+    locations.add(loc1);
+    locations.add(loc2);
+    locations.add(loc3);
+    locations.add(loc4);
+
+    t.setLocations(locations);
+    return teacherRepository.save(t);
+  }
+
+  @RequestMapping("/q1")
+  public Teacher q1(String name){
+    return teacherRepository.findByName(name);
+  }
+  
+  @RequestMapping("/q2")
+  public List<Teacher> q2(int age){
+    return teacherRepository.withQueryFindByAge(age);
+  }
+
+}
+```
+
+- 运行之后，访问localhost:10086/save 测试保存， /q1?name=ljb   /q2?age=20。图就不截了。
+
+##### 8.6.2 Redis
+
+​	Redis是一个基于键值对的开源内存数据存储，也可以做数据缓存。具体可以看看 [Redis实战第一章的介绍](https://krystalics.github.io/2018/11/20/%E7%AC%AC%E4%B8%80%E7%AB%A0-%E5%88%9D%E8%AF%86Redis/)
+
+Spring 对它的支持是通过Spring Data Redis来实现的，为我们提供了连接相关的ConnectionFactory和数据操作相关的RedisTemplate。根据不同的Java客户端，还有不同的连接器。这里就不详述。据其中一种作为例子
+
+```java
+@Bean
+public RedisConnectionFactory redisConnectionFactroy(){
+    return new JedisConnectionFactory();
+}
+```
+
+```java
+@Bean
+public RedisTemplate<Object,Object> redisTemplate() throws UnknownHostException{
+    RedisTemplate<Object,Object> template=new RedisTemplate<>();
+    template.setConnectionFactory(redisConnectionFactory());//调用上面的方法
+    return template;
+}
+```
+
+还提供了 RedisTemplate 和 StringRedisTemplate两个模板来进行数据操作。其中StringRedisTemplate只针对字符型的数据操作。主要提供下面这些方法操作数据。
+
+
+
+| 方法          | 说明       |
+| ------------- | ---------- |
+| opsForValue() | 操作String |
+| opsForList()  | list       |
+| opsForSet()   | set        |
+| opsForZSet()  | zset       |
+| opsForHash()  | hash       |
+
+定义Serializer：当我们将数据存储到Redis时，我们的key和value都是通过Spring的序列化，来存到数据中的。RedisTemplate 默认使用的是JdkSerializationRedisSerializer，StringRedisTemplate默认使用StringRedisSerializer。
+
+
+
+##### SpringBoot对Redis的支持	
+
+​	默认配置了JedisConnectionFactory，RedisTemplate以及StringRedisTemplate，让我们可以直接使用Redis作为数据存储。在application.properties中的配置如下：
+
+```properties
+spring.redis.database=0 #数据库名称，默认为db0
+spring.redis.host=localhost #服务器地址默认为这个
+spring.redis.password=
+spring.redis.port= #端口号默认为6379
+....
+```
+
+**实战**
+
+- 安装Redis，可以去官网也可以用Docker
+- 添加依赖 spring-boot-starter-redis
+- 领域类模型必须要实现Serializable 接口，作为序列化用Jackson构造时还需要一个空的构造函数
+
+```java
+package com.example.data_ch8.redis;
+
+import java.io.Serializable;
+
+public class Student implements Serializable {
+  private static final long serialVersionId=1L;
+
+  private String id;
+  private String name;
+  private int age;
+  
+  public Student(){}//为Jackson构造的空函数
+    
+  public Student(String id,String name,int age){
+    this.id=id;
+    this.name=name;
+    this.age=age;
+  }
+
+  public String getId() {
+    return id;
+  }
+
+  public void setId(String id) {
+    this.id = id;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public int getAge() {
+    return age;
+  }
+
+  public void setAge(int age) {
+    this.age = age;
+  }
+}
+```
+
+- 数据访问
+
+```java
+package com.example.data_ch8.redis;
+
+import javax.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public class StudentDao {
+  @Autowired
+  StringRedisTemplate stringRedisTemplate; //注入Spring Boot已经配置好的stringRedisTemplate
+
+  @Resource(name = "stringRedisTemplate")
+  private ValueOperations<String,String> valOpsStr;
+
+  @Autowired
+  RedisTemplate<Object,Object> redisTemplate;
+
+  @Resource(name = "redisTemplate")
+  private ValueOperations<Object,Object> valOps;
+
+  public void strDemo(){
+    valOpsStr.set("xx","yy");
+  }
+
+  public void save(Student student){
+    valOps.set(student.getId(),student);
+  }
+
+  public String getString(){
+    return valOpsStr.get("xx");
+  }
+
+  public Student getStudent(){
+    return (Student)valOps.get("1");
+  }
+}
+```
+
+- 控制器
+
+```java
+package com.example.data_ch8.redis;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class StudentController {
+  @Autowired
+  StudentDao studentDao;
+
+  @RequestMapping("/set")
+  public void set(){
+    Student student=new Student("1","ljb",20);
+    studentDao.save(student);
+    studentDao.strDemo();
+  }
+
+  @RequestMapping("/getStr")
+  public String getStr(){
+    return studentDao.getString();
+  }
+
+  @RequestMapping("/getStudent")
+  public Student getStudent(){
+    return studentDao.getStudent();
+  }
+}
+```
+
+- 运行之后，访问 localhost:10086/set  /getStr  /getStudent  再观察页面和 Redis数据库的变化
+
+spring boot 为我们自动配置的RedisTemplate ，使用JskSerializationRedisSerializer，使用二级制形式存储数据，要是不满意，我们可以自己配置定义Serializer,在主类下加入以下代码。
+
+```java
+@Bean
+@SuppressWarnings({"rawtypes","unchecked"})
+public RedisTemplate<Object,Object> redisTemplate(RedisConnectoryFactory connection)throws UnknownException{
+    RedisTemplate<Object,Object> template=new RedisTemplate<>();
+    template.setConnectionFactory(connection);
+    
+    Jackson2JsonRedisSerializer jackson=new Jackson2JsonRedisSerializer(Object.class);
+    ObjectMapper om=new ObjectMapper();
+    om.setVisibility(PropertyAccessor.ALL,JsonAutoDetect.Visibility.ANY);
+    om.ebableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
+    
+    //设置value的序列化采用 Jackson2JsonRedisSerializer，实际上这个也可以自己定义
+    template.setValueSerializer(jackson); 
+    //设置key的序列化采用 StringRedisSerializer
+    template.setKeySerializer(new StringRedisSerializer()); 
+    
+    
+    template.afterPropertiesSet();
+    return template;
+}
+```
+
+
+
+
+
