@@ -32,7 +32,7 @@ public class B{
 
 模式中包括四种角色：1. Receiver   2. Command 接口  3.Concrete Command   4.Invoker(请求者)
 
-<img src="https://github.com/krystalics/MyPostPicture/blob/master/%E5%91%BD%E4%BB%A4%E6%A8%A1%E5%BC%8F%E7%B1%BB%E5%9B%BE.png">
+<img src="https://github.com/krystalics/MyPostPicture/blob/master/%E5%91%BD%E4%BB%A4%E6%A8%A1%E5%BC%8F%E7%B1%BB%E5%9B%BE.png？raw=true">
 
 像上面这个类图中，Invoker.executeCommand() 就最终调用了Receiver.action()，并且没有接触到对方。通过接口将引用传递过去。[具体代码见这个库](https://github.com/krystalics/DesignPattern/tree/master/src/com/company/Command)
 
