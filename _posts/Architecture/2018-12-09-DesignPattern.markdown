@@ -32,17 +32,29 @@ public class B{
 
 模式中包括四种角色：1. Receiver   2. Command 接口  3.Concrete Command   4.Invoker(请求者)
 
-<img src="https://github.com/krystalics/MyPostPicture/blob/master/%E5%91%BD%E4%BB%A4%E6%A8%A1%E5%BC%8F%E7%B1%BB%E5%9B%BE.png?raw=true">
+<img src="https://github.com/krystalics/MyPostPicture/blob/master/58.png?raw=true">
 
 像上面这个类图中，Invoker.executeCommand() 就最终调用了Receiver.action()，并且没有接触到对方。通过接口将引用传递过去。[具体代码见这个库](https://github.com/krystalics/DesignPattern/tree/master/src/com/company/Command)
 
 
 
+##### 2.观察者模式（别名：依赖，发布-订阅）
 
+​	定义对象间的一种**一对多的依赖关系**，当一个对象的**状态发生变化**时，**所有依赖于它的对象都得到通知，并自动更新。**
 
+例子：我表哥把自己的信息放在了相亲网站上，其中百合网新登记了一些女生，通知他和其他人这个消息。
 
+观察者模式中有四种角色：
 
+1. Subject 主题  **就是相亲网站**
 
+2. Observer 观察者  **在相亲网站登记过的人**
+3. 具体主题 **就是百合网**
+4. 具体观察者 是**我表哥和其他在相亲网站上登记过的人**
+
+<img src="https://github.com/krystalics/MyPostPicture/blob/master/59.png?raw=true">
+
+ [代码传送](https://github.com/krystalics/DesignPattern/tree/master/src/com/company/observer)
 
 
 
