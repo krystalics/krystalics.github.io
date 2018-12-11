@@ -34,7 +34,7 @@ public class B{
 
 <img src="https://github.com/krystalics/MyPostPicture/blob/master/58.png?raw=true">
 
-像上面这个类图中，Invoker.executeCommand() 就最终调用了Receiver.action()，并且没有接触到对方。通过接口将引用传递过去。[具体代码见这个库](https://github.com/krystalics/DesignPattern/tree/master/src/com/company/Command)
+像上面这个类图中，Invoker.executeCommand() 就最终调用了Receiver.action()，并且没有接触到对方。通过接口将引用传递过去。[具体代码见这个库](https://github.com/krystalics/DesignPattern/tree/master/src/com/company/command)
 
 
 
