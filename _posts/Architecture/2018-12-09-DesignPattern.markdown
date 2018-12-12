@@ -58,11 +58,20 @@ public class B{
 
 
 
+##### 3.装饰模式（别名：包装器）
 
+​	动态地给对象添加一些额外的职责。就功能来说装饰模式相比生成子类更为灵活。Spring的AOP就是类似这样的。不需要改变原有类的代码，动态多展功能的一种成熟模式。
 
+例子：就像是手枪可以装上消音器，我们日常生活中的衣服也像是这种情况。在不改变我们身体情况下，改变我们的外观。装饰模式的结构中包括四种角色：
 
+- 抽象组件 Component   =>  人类
+- 具体组件 = >  我，其他人类
+- 装饰 Decorator  =>  衣服
+- 具体装饰   =>   衬衫，T-shift...
 
+<img src="https://github.com/krystalics/MyPostPicture/blob/master/60.png?raw=true">
 
+[代码传送](https://github.com/krystalics/DesignPattern/tree/master/src/com/company/decorator)
 
 
 
