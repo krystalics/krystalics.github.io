@@ -75,6 +75,20 @@ public class B{
 
 
 
+##### 4.策略模式（别名：政策）
+
+​	定义一系列算法，把它们一个个封装起来，并且使它们可相互替换。本模式使得算法可独立于使用它的客户而变化。它是处理算法的不同变体的一种成熟模式，策略模式是通过接口或者抽象封装算法的标识，即在接口中定义一个抽象方法，实现该接口的类将实现接口中的抽象方法。
+
+策略模式的结构中包括三种角色：
+
+- 策略 Strategy
+- 具体策略
+- 上下文 Context
+
+<img src="https://github.com/krystalics/MyPostPicture/blob/master/61.png?raw=true">
+
+[代码传送](https://github.com/krystalics/DesignPattern/tree/master/src/com/company/strategy)
+
 ---
 
 参考资料：
