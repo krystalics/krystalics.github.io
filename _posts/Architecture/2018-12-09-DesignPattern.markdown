@@ -89,6 +89,28 @@ public class B{
 
 [代码传送](https://github.com/krystalics/DesignPattern/tree/master/src/com/company/strategy)
 
+
+
+5. **适配器模式（别名：包装器）**
+
+   ​	将一个类的接口转换成客户希望的另外一个接口。Adapter模式使得原本由于接口不兼容而不能一起工作的那些类可以一起工作。
+
+   ​	适配器模式是将一个类的接口（被适配者）转换成客户希望的另外一个接口（目标）的成熟模式，该模式中涉及有目标、被适配者和适配器。适配器模式的关键是建立一个适配器，这个适配器实现了目标接口并包含有被适配者的引用。
+
+   ​	实例：用户已有一个两相的插座，但最近用户又有了一个新的三相插座。用户现在已经有一台洗衣机和一台电视机，洗衣机按着三相插座的标准配有三相插头，而电视机按着两相插座的标准配有两相插头。现在用户想用新的三相插座来使用洗衣机和电视机。
+
+   模式中包含三种角色：
+
+   - 目标(Target)
+   - 被适配者(Adaptee)
+   - 适配器(Adapter)
+
+<img src="https://github.com/krystalics/MyPostPicture/blob/master/62.png?raw=true">
+
+​	[代码传送](https://github.com/krystalics/DesignPattern/tree/master/src/com/company/adapter)
+
+
+
 ---
 
 参考资料：
