@@ -42,15 +42,15 @@ INSERTION-SORT(A)
 6 		A[i+1] = A[i]
 7 		i = i - 1
 8 	A[i+1] = key
-```
 
 举个例子： 8，4，3，2，9 
 
->  8 **4** 3 2 9
->  4 8 **3** 2 9
->  3 4 8 **2** 9
->  2 3 4 8 **9**
+>  8 *4* 3 2 9
+>  4 8 *3* 2 9
+>  3 4 8 *2* 9
+>  2 3 4 8 *9*
 >  2 3 4 8 9
+```
 
 这是一个简单的算法，就不拘束于细节了。**现在我们讲下如何对一个算法进行分析：**
 
@@ -82,7 +82,7 @@ INSERTION-SORT(A)
 
 ​	从数学的角度来看：当n充分大的时候，总有θ(n^2) 比 θ(n^3) 要快，如下图示
 
-<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/%E7%AE%97%E6%B3%95%E5%AF%BC%E8%AE%BA%E9%A2%98%E7%9B%AE/img/1.png?raw=true">
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/Introduction_to_Algorithm/img/1.png?raw=true">
 
 从工程学的角度来看：有时候θ(n^3) 要更好用些，这要看输入的情况。
 
@@ -97,11 +97,8 @@ Merge sort A[1...n]  // 下标从1开始
 	A[1...n/2] and
 	A[n/2 +1...n]
 3.Merge 2 sorted lists
-```
 
-**关键子程序在于 归并**：下面举个例子
-
-```
+//关键子程序在于 归并
 20   12
 13	 11
 7	 9
@@ -110,7 +107,6 @@ Merge sort A[1...n]  // 下标从1开始
 push(1)  , 然后将 1 跳过，再对比两个队首，2 和 9 
 push(2)  , 7 和 9 
 push(7) ....直到
-
 ```
 
 **每一步只关注两个元素，都是固定数目的操作。所以对总数为n的输入，把这两个队列归并的时间是θ(n) 线性时间。** 第一步的时间省略了，因为它只有一个操作，比较 n==1?  
@@ -119,7 +115,7 @@ push(7) ....直到
 
 ​	**T(n)= 2T(n/2)+θ(n)  , n>1**    当 n ==1 时 T(n)=1 这没什么好说的 
 
-实际上 θ(n) 可以用显式的 cn (c是常数)来表示 即  **T(n)= 2T(n/2)+cn  , n>1**   这实际上是个递归的式子。我们通过构造递归树的方式来求解方程；如下图示 ： **2^h=n  所以 h=lg n**<img src="./img/2.png">
+实际上 θ(n) 可以用显式的 cn (c是常数)来表示 即  **T(n)= 2T(n/2)+cn  , n>1**   这实际上是个递归的式子。我们通过构造递归树的方式来求解方程；如下图示 ： **2^h=n  所以 h=lg n**<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/Introduction_to_Algorithm/img/2.png?raw=true">
 
 最终 **T(n)=(cn)lgn+θ(n)  （θ(n)属于低项，舍去）**
 
