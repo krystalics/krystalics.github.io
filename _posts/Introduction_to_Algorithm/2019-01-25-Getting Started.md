@@ -30,7 +30,7 @@
 
 ​	性能在计算机领域扮演的角色就好像**货币在经济领域中的角色**，我们可以用人民币购买我们日常生活的必需品，从某种意义上来说 货币 本身并没有价值，水，食物都比货币重要。**因为它是衡量的一般性标准，可以说牺牲了多少性能换来了安全，换来了功能，换来了用户友好....** 
 
-​	讲完了为什么要学习算法，接下来就用一个小例子(插入排序)： [代码在这->](https://github.com/krystalics/algorithm/blob/master/src/com/company/chapter2/Insertion_sort.java)  
+​	讲完了为什么要学习算法，接下来就用一个小例子(插入排序)： 
 
 ```C
 INSERTION-SORT(A)
@@ -52,7 +52,28 @@ INSERTION-SORT(A)
 >  2 3 4 8 9
 ```
 
-这是一个简单的算法，就不拘束于细节了。**现在我们讲下如何对一个算法进行分析：**
+这是一个简单的算法，就不拘束于细节了。
+
+```java
+private static void sort_insert(int[] A) {
+  
+    for (int i = 1; i < A.length; i++) { 
+      int key = A[i]; //当前元素的值
+      int j = i - 1;
+      while (j >= 0 && A[j] > key) { 
+        A[j + 1] = A[j]; //相当于 前面一个元素的值向后面挪一步，
+        j--;
+      }
+      A[j + 1] = key; 
+    // 要么j=-1 跳出循环，证明前面没有比key小的元素，所以第一个元素的值就应该是key
+   // 要么是执行到一半有A[j]<=key ，自然 A[j+1]=key
+    }
+  }
+```
+
+
+
+**现在我们讲下如何对一个算法进行分析：**
 
 ##### Running Time： 算法运行时间
 
@@ -92,11 +113,11 @@ INSERTION-SORT(A)
 
 ```C
 Merge sort A[1...n]  // 下标从1开始
-1. if n=1 ,done
-2. Recursively sort（递归排序）
-	A[1...n/2] and
-	A[n/2 +1...n]
-3.Merge 2 sorted lists
+	1. if n=1 ,done
+	2. Recursively sort（递归排序）
+		A[1...n/2] and
+		A[n/2 +1...n]
+	3.Merge 2 sorted lists
 
 //关键子程序在于 归并
 20   12
@@ -109,7 +130,70 @@ push(2)  , 7 和 9
 push(7) ....直到
 ```
 
-**每一步只关注两个元素，都是固定数目的操作。所以对总数为n的输入，把这两个队列归并的时间是θ(n) 线性时间。** 第一步的时间省略了，因为它只有一个操作，比较 n==1?  
+```java
+private static void sort_merge(int A[], int start, int end) {
+
+    if (end == start) {
+      return;  // 只有一个元素的时候 就返回
+    } else {
+      int middle = (start + end) / 2;
+      sort_merge(A, start, middle);  //递归的第一个集合
+      sort_merge(A, middle + 1, end);
+
+      //递归之后，开始 将各个有序数列进行 合并。从每个数列1个元素开始
+      merge(A, start, middle + 1, end);
+
+    }
+
+  }
+
+  private static void merge(int[] A, int start, int middle, int end) {
+// 分为 [start,middle) [middle,end]
+    int[] left = new int[middle - start]; 
+     
+    int[] right = new int[end - middle + 1];  
+    
+      //填充左边的数据
+   	if (left.length >= 0) {
+      System.arraycopy(A, start, left, 0, left.length);
+    }
+    //填充右边的数据,
+    if (right.length >= 0) {
+      System.arraycopy(A, middle, right, 0, right.length);
+    }
+
+    // 填充完数据之后，开始归并
+    int index_l = 0, index_r = 0, key = start; //作为两个数组的首部指针,而key 表示从哪个地方开始
+    while (index_l < left.length && index_r < right.length) {
+      // 当某个指针到了尾部 就结束
+      if (left[index_l] < right[index_r]) { //哪边的更小，就将哪边的值赋给A[key]
+        A[key++] = left[index_l++];
+      } else {
+        A[key++] = right[index_r++];
+      }
+    }
+
+    while (index_l < left.length) {
+      //如果左边的数组还没结束，那么就将左边后面的所有元素都搬进A中
+      A[key++] = left[index_l++];
+    }
+
+    while (index_r < right.length) {
+      //同上
+      A[key++] = right[index_r++];
+    }
+
+  }
+
+```
+
+
+
+
+
+**每一步只关注两个元素，都是固定数目的操作。所以对总数为n的输入，把这两个队列归并的时间**
+
+**是θ(n) 线性时间。** 第一步的时间省略了，因为它只有一个操作，比较 n==1?  
 
  假设为n个元素排序需要T(n)的时间，那么我们现在需要关注的是 **递归** 的时间： **2T(n/2)** 它是分别的时间，为两个n/2元素排序。 最终得出的结果关于这个算法
 
