@@ -82,7 +82,7 @@ INSERTION-SORT(A)
 
 ​	从数学的角度来看：当n充分大的时候，总有θ(n^2) 比 θ(n^3) 要快，如下图示
 
-<img src="./img/1.png">
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/%E7%AE%97%E6%B3%95%E5%AF%BC%E8%AE%BA%E9%A2%98%E7%9B%AE/img/1.png?raw=true">
 
 从工程学的角度来看：有时候θ(n^3) 要更好用些，这要看输入的情况。
 
