@@ -2,11 +2,13 @@
 
 ##### <a href="#find">查找算法</a>  参考自http://www.cnblogs.com/maybe2030/p/4715035.html ，经过整理后写下
 
+##### <a href="#sort">排序算法</a> 参考自 https://www.cnblogs.com/maybe2030/p/4715042.html 
+
 
 
 ---
 
-<a href="find">查找算法</a>
+<a id="find">查找算法</a>
 
 ​	查找算法分为**静态查找**和**动态查找**，都是针对查找表而言的。动态表指查找表中有删除和插入操作的表。
 
@@ -453,35 +455,116 @@ public class Hash {
 
 
 
+---
+
+##### <a id="sort">排序算法-基础</a>
+
+​	排序有分为内部排序和外部排序，内部排序是数据记录在内存中进行排序，外部排序因为数据量过大，所以需要访问硬盘。一般来说，我们现在接触到的都是内部排序。
+
+​	按照常见的分类算法还可以将内部排序分为两个大类：比较排序和非比较排序。非比较排序（如计数排序，基数排序，桶排序）时间复杂度很低，为线性复杂度$O(n)$ ，但是这样的排序方法受到的限制比较多。不是通用的，所以主要讲通用的排序算法（插入排序，快速排序，归并排序...）
 
 
 
+**选择排序**的思想是最简单的，就是不断的将现有数组中最大的值往末端移，直到循环结束。就不在这里赘述了。
+
+**插入排序**：有很多的优化和改进。先简单介绍一下思想：将数组分为两个部分，前半段有序后半段无序。默认数组中第一个元素是有序的，直接从第二个元素开始，与前面有序集合比较，如果比它们都小，就插入到第一个位置。接着第三个与前面两个比较，这样不断插入直到结束
+
+也很简单，但是很多细节可以优化。比如
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/Introduction_to_Algorithm/img/8.png?raw=true">
+
+```java
+private  void sort_insert(int[] A) {
+  
+    for (int i = 1; i < A.length; i++) { 
+      int key = A[i]; //当前元素的值
+      int j = i - 1;
+      while (j >= 0 && A[j] > key) { 
+        A[j + 1] = A[j]; //相当于 前面一个元素的值向后面挪一步，
+        j--;
+      }
+      A[j + 1] = key; 
+    // 要么j=-1 跳出循环，证明前面没有比key小的元素，所以第一个元素的值就应该是key
+   // 要么是执行到一半有A[j]<=key ，自然 A[j+1]=key
+    }
+  }
+
+// 上面一段有点麻烦，下面简化程序来自参考文章：
+public void InsertionSort(int A[]) {
+    for(int i=1; i<A.length; i++)
+        for(int j=i-1; j>=0 && a[j]>a[j+1]; j--)
+            Swap(a[j], a[j+1]); //用交换函数来代替赋值，也不用临时变量了
+}
+```
 
 
 
+**希尔排序** Shells Sort：
+
+​	是基于插入排序的改进，又叫做缩小增量排序。基本思想是：先将整个待排序的记录序列分割成为若干个子序列分别进行直接插入排序，待整个序列中的记录基本有序时，再对全体进行插入排序。
+
+**算法流程：**
+
+1. 选择一个增量序列t1,t2,.ti,tj...,tk  其中ti>tj，tk=1；
+2. 按照增量序列个数k，对序列进行k趟排序
+3. **每趟排序根据对应增量ti**，将待排序序列分割成若干个长度为m的子序列。分别对各子表进行插入排序。仅增量因子为1时，整个序列作为一个表来处理。表长度为序列长度。
 
 
 
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/Introduction_to_Algorithm/img/9.png?raw=true">
 
 
 
+**时间复杂度：**$O(n^{1+e})   0<e<1$ ，在**元素基本有序的情况下，效率很高**，不稳定的排序算法
+
+> 相等元素的前后顺序没有改变，就叫做排序是稳定的
+
+这里希尔排序会造成原序列中相等的元素在新序列中顺序与之前不一致，所以是不稳定的排序算法
+
+```java
+public class ShellsSort {
+
+  public void shells(int[] A) {
+    //1.选择一个增量序列，这里选择 1,2,4...n等比序列，从大的增量n开始,到1结束
+    //定义增量为 increment
+    for (int increment = A.length / 2; increment > 0; increment /= 2) {
+      //对每个增量 进行一次 插入排序，
+      for(int i=increment;i<A.length;i++){
+        //从第increment开始往前滚，交换后面的值比对应前面小的
+        for(int j=i;j-increment>=0&&A[j]<A[j-increment];j-=increment){
+          // 交换两者的值
+          int temp=A[j-increment];
+          A[j-increment]=A[j];
+          A[j]=temp;
+        }
+      }
+    }// 增量的循环，
+  }
+
+  public static void main(String[] args) {
+    int[] A = {5, 2, 4, 6, 1, 3}; //初始的数组
+    ShellsSort shellsSort=new ShellsSort();
+    shellsSort.shells(A);
+    for(int i:A){
+      System.out.println(i);
+    }
+  }
+```
 
 
 
+**堆排序** Heap Sort
+
+​	堆排序是一种树形选择排序，是对选择排序的改进。图片来自：[一篇博客](https://www.cnblogs.com/chengxiao/p/6129630.html)
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/Introduction_to_Algorithm/img/10.png?raw=true">
+
+​	堆排序的基本思想是：**将待排序序列构造成一个大顶堆**，此时，整个序列的最大值就是堆顶的根节点。**将其与末尾元素进行交换，此时末尾就为最大值。**然后将剩余n-1个元素重新构造成一个堆，重复上述过程。最终得到一个有序序列
+
+具体的详细内容见：[图解排序算法之堆排序](https://www.cnblogs.com/chengxiao/p/6129630.html)
 
 
 
+**归并排序**：Merge Sort
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+[归并排序](https://krystalics.github.io/2019/01/25/Getting-Started/#%E5%BD%92%E5%B9%B6%E6%8E%92%E5%BA%8F) 整理了算法导论和网上的一篇文章(抱歉，已经忘了哪篇)

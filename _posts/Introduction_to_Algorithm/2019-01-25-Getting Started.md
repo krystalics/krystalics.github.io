@@ -32,6 +32,8 @@
 
 ​	讲完了为什么要学习算法，接下来就用一个小例子(插入排序)： 
 
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/Introduction_to_Algorithm/img/8.png?raw=true">
+
 ```C
 INSERTION-SORT(A)
 1 for j = 2 to A.length  // 下标从1开始计算
