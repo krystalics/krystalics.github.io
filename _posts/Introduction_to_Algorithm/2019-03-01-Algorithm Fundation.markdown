@@ -568,3 +568,98 @@ public class ShellsSort {
 **归并排序**：Merge Sort
 
 [归并排序](https://krystalics.github.io/2019/01/25/Getting-Started/#%E5%BD%92%E5%B9%B6%E6%8E%92%E5%BA%8F) 整理了算法导论和网上的一篇文章(抱歉，已经忘了哪篇)
+
+
+
+**快速排序**：Quick Sort
+
+基本思想：**分而治之**
+
+- 先从数列中取出一个数作为**基准数**
+- **根据基准数将数列进行分区**，小于基准数的放在左边，大于在右边
+- 重复上述操作，直到各区间只有一个数为止
+
+时间复杂度$O(nlogn)$ ，但是初始数列基本有序时，快速排序反而会变成冒泡排序。快速排序图解过程如下：
+
+[图解快速排序算法](https://blog.csdn.net/sfsk_sa/article/details/79544469)  我做了注解：
+
+```java
+public void quickSort(int left, int right, int a[]) {
+  // 一开始先对整个序列进行初始排序，所以left=0, right=a.length-1。
+  // 这里直接就以第一个数为基准数了
+  if (left < right) { //这里的意思是，如果该区间只有1个元素就停止排序
+    int start = left, end = right, temp = a[start];
+    while (start < end) {
+      // 从右向左找小于基准值a[start]的数
+      while (start < end && a[end] > temp) {
+        end--;
+      }
+      // 将start与end比较是为了得知，右侧如果有比temp小的数就 将其赋值到a[start]中，应为已经有临时变量，所以不用交换
+      if (start < end) {
+        a[start++] = a[end];
+      }//将右侧小的数交换到左侧，下标+1 即往后走一步
+
+      // 右侧找完了之后再从左侧开始找，直到找到左侧比temp大或者没有
+      while (start < end && a[start] < temp) {
+        start++;
+      }
+      if (start < end) {
+        a[end--] = a[start];
+      } //将左侧大的数交换到右侧 然后指标-1，即往前走
+
+    }
+    a[start] = temp; //最后将临时变量还给a[start],尽管start已经改变位置了，可是那才是它在这个序列中的位置
+    quickSort(left, start - 1, a); //之后 开始对 start的左侧
+    quickSort(start + 1, right, a); //右侧 开始进行快速排序
+  }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
