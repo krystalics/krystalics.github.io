@@ -44,7 +44,7 @@
 
 问题3：Fibonacci  斐波那契数列
 
-<img src="./img/Fibonacci.jpg">
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/introduction_to_algorithm/img/Fibonacci.JPG?raw=true">
 
 ​	递归的时间复杂度是指数级的，非常大 ，如何将其转为多项式级。因为里面含有大量的重复计算，递归代码如下：
 
@@ -81,7 +81,7 @@ public int fibonacci_dynamic(int n){
 
 方法3：朴素平方递归式，如下图：
 
-<img src="./img/矩阵.jpg">
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/introduction_to_algorithm/img/矩阵.JPG?raw=true">
 
 
 
