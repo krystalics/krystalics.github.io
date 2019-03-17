@@ -1,6 +1,6 @@
 # Site settings
-title: Krystalics blog
-SEOTitle: 林家宝的博客 | Krystalics Blog
+title: Krysta's blog
+SEOTitle: 林家宝的博客 | Krysta Blog
 header-img: img/home-bg.jpg
 email: anti_light@qq.com
 description: "只是记录一些文章"
@@ -15,6 +15,8 @@ future: true
 RSS: false
 
 github_username: krystalics
+qq_username: 1285706087
+wechat_username: Anti_light
 
 #facebook_username:  huxpro
 #linkedin_username:  firstname-lastname-idxxxx
