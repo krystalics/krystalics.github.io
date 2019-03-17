@@ -1,9 +1,107 @@
-> 写点东西，记录一下大学还算刻苦的生活
 
-​	 林家宝，一个普通的在校大学生。学校还算可以(武汉理工大学)，这可能是我大学四年来比较值得称道的一件事了。大三一开始我就准备要开始为找工作做打算了，可是大学的慵懒生活让我始终紧凑不起来。直到一个多月前(2018.10月下旬)，我才意识到没有时间了。于是急忙看了几本书，刷了几道题。补充着我在网上看到的一些，JAVA后端应该懂的东西。感觉基础还不错，所以吸收新东西还挺快的。(在这里又要介绍一下，我的绩点还不错处在班上第10位)。
 
-​	为什么会觉得没时间呢？因为我原本是想着先在明年2，3月份能够找到实习。可是发现我什么都不会，于是为了武装自己，只能摆脱安稳悠闲的生活，开始不断地在课间看书，看文章。
+**晨光熹微**
 
-​	希望能够找到一个好实习
+ 
 
-​	
+读诗，悲欢他人的悲欢
+
+写诗，刻下人生的轨迹
+
+人类互相交织的热情
+
+在哭泣中点燃了生命之火
+
+浊世的火焰在疯狂的燃烧着最后的青春
+
+就像在雪地里留下的脚印最终被抹去
+
+看见，听见，遇见那最后的圣洁与黎明
+
+化成微风与尘埃
+
+ 
+
+不是我不想要坚强
+
+不是我天生懦弱
+
+我想要抓住我生命的光亮
+
+可我在黑暗中失去了自我
+
+ 
+
+指引者
+
+请告诉我该去的方向
+
+请不要在意世人的目光
+
+就像那些色彩褪去的老照片
+
+现在就只有斑驳的旧影
+
+心中的信仰永不会倒塌
+
+希望的种子已经发出了芽
+
+请等待下一个轮回
+
+ 
+
+**The Light of Dawn**
+
+​                                                                                                          
+
+We read poems in our hearts.
+
+We write verse of our own life.
+
+Interconnected with each other,
+
+In crying our lives are brightened by zeal and ardor.
+
+Fire is burning out our last moments of youth in this bewildering world，
+
+As the footprints will be covered at last in this vast snowfield.
+
+Seeing, hearing and facing the last holiness in the dawn,
+
+We are finally transformed to mild wind and fine dust.
+
+ 
+
+I want to be as tough as a mountain.
+
+I want to be as brave as a soldier.
+
+I want to seize the light and control my life.
+
+But I lost myself under the darkness.
+
+ 
+
+Oh Captain, my Captain!
+
+Please point a way to free my soul.
+
+Don't mind the eyes of the world.
+
+Color of the old photos has faded,
+
+Leaving motley shadows only.
+
+But faith will not fall down.
+
+Its seeds are sprouting with hopes，
+
+Waiting for a new Samsara.
+
+ 
+
+ 
+
+ Powered By  林家宝&Sissi(大一的英语老师)
+
+ 

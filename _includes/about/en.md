@@ -110,6 +110,6 @@ Waiting for a new Samsara.
 
  
 
- Power By  林家宝&Sissi(大一的英语老师)
+ Powered By  林家宝&Sissi(大一的英语老师)
 
  
