@@ -8,7 +8,7 @@
 
 - 系统功能模块
 
-<img src="./img/系统功能图.png">
+<img src="https://github.com/krystalics/RBooks/blob/master/img/%E7%B3%BB%E7%BB%9F%E5%8A%9F%E8%83%BD%E5%9B%BE.png?raw=true">
 
 - **用户与权限管理：**
 
@@ -18,17 +18,17 @@
 
 **数据可视性：**普通用户只能看见自己的信息，而管理用户可以看见所有用户信息。
 
-<img src="./img/业务流程图.png">
+<img src="https://github.com/krystalics/RBooks/blob/master/img/%E4%B8%9A%E5%8A%A1%E6%B5%81%E7%A8%8B%E5%9B%BE.png?raw=true">
 
 - **用例设计图**
 
-<img src="./img/用例图.png">
+<img src="https://github.com/krystalics/RBooks/blob/master/img/%E7%94%A8%E4%BE%8B%E5%9B%BE.png?raw=true">
 
 
 
 - **后台模块设计**
 
-<img src="./img/项目结构图.png">
+<img src="https://github.com/krystalics/RBooks/blob/master/img/%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84%E5%9B%BE.png?raw=true">
 
 **以service为中心，通过调用dao读取和储存数据，反应到controller中，最后与前端完成交互**
 
@@ -36,7 +36,7 @@
 
 抽象的层面如下图：
 
-<img src="./img/后台项目结构图.png">
+<img src="https://github.com/krystalics/RBooks/blob/master/img/%E5%90%8E%E5%8F%B0%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84%E5%9B%BE.png?raw=true">
 
 划分完层次结构之后的步骤：
 
@@ -53,13 +53,13 @@
 
 在写Controller模块，遇到了一个问题，那就是User表中的Id是自增的，我在犹豫是否要在参数中加入Id，查了资料感觉没什么用。于是就直接用postman试了一下，发现不加id也是可以的。会由hibernate自动生成的表 hibernate_sequence 中的值决定下一个id是多少，
 
-<img src="./img/3.png">
+<img src="https://github.com/krystalics/RBooks/blob/master/img/3.png?raw=true">
 
 如上图中下一个id的值是6，就是这样。如果表中已经有值，id和next_val冲突就会报错，因为primary_key只能有一个值不能重复。
 
 关于Hibernate的自增主键管理，这个项目只有两个自增主键。可是它们并不是分别自增，而是共享一个值，那个值就是之前图中的next_val，即使修改了三行next_val中的另外两行也是如此。
 
-<img src="./img/7.png"><img src="./img/6.png">
+<img src="https://github.com/krystalics/RBooks/blob/master/img/7.png?raw=true"><img src="https://github.com/krystalics/RBooks/blob/master/img/6.png?raw=true">
 
 不过这不是什么大问题，只是有点奇怪罢了。之后有时间再琢磨吧。
 
@@ -74,7 +74,7 @@
 
 ##### 利用 Cookie 管理 Session
 
-<img src="./img/4.png">
+<img src="https://github.com/krystalics/RBooks/blob/master/img/4.png?raw=true">
 
 而且关于Cookie和Session ，SpringBoot会有专门的模块处理的，后面具体的操作就不赘述了。
 
@@ -135,9 +135,9 @@ public interface BookRepository extends CrudRepository<Book,Integer> {
 
 Could not find acceptable representation  讲的是前端传来的数据与后端Content-Type的要求不一致，可是在项目中两者是一致的呀。还有说是命名重复导致，我还没涉及到js文件呢。
 
-<img src="./img/8.png">
+<img src="https://github.com/krystalics/RBooks/blob/master/img/8.png?raw=true">
 
-<img src="./img/9.png">
+<img src="https://github.com/krystalics/RBooks/blob/master/img/9.png?raw=true">
 
 
 
