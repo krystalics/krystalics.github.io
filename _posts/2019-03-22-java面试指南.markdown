@@ -1,0 +1,43 @@
+
+
+下面这些tips是我在牛客网AI面试遇到的问题，我把答案集合一下；
+
+---
+
+
+
+1. ##### Cookie和Session的区别
+
+由于HTTP协议是无状态的协议，所以服务端需要记录用户的状态时，就需要用某种机制来识具体的用户，这个机制就是Session.
+
+前端用户登录时，后端会产生一个独有的SessionId存储到内存或者Redis中并返回前端。前端管理它的叫做cookie，每次HTTP请求的时候，客户端都会发送相应的Cookie信息到服务端。服务器就能够识别是哪个用户了。
+
+但是从前端到后端的过程中容易被伪造，有大小限制，只能用ASCII 码。而后端的session没有大小限制
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/3.jpg?raw=true">
+
+ 
+
+2. ##### 为什么Redis是单线程的
+
+redis 几乎完全是在内存中进行操作的，速度比使用硬盘的数据库要快得多。多线程的上下文的切换，对于一个内存的系统来说，消耗比较大，而且多线程需要各种锁来保证线程安全，对速度有影响。所以因为单线程的Redis够快，所以不需要多线程来并发操作。
+
+至于具体为什么这么快，见这篇博客：
+
+https://blog.csdn.net/xlgen157387/article/details/79470556
+
+外加对mysql和redis速度的定量分析： mysql 每秒钟执行大概几千次，Redis能达到几十万次，二者根本不在一个层面上。
+
+Redis 文章：
+
+<http://database.51cto.com/art/201809/584266.htm#topx> 
+
+3. ##### 怎么将一个ArrayList倒序输出
+
+Collections.reverse(list);  怎么有reverse不将其放进 ArrayList的方法中，而是要另外放在Collections的静态变量中。
+
+像是String也没有reverse方法，而StringBuilder和StringBuffer就有。//如果一个对象没有基本的方法，就去他父类的静态方法中看看，往往有收获，像是 数组 Arrays.sort()  当然数组在java中不是对象。
+
+ 
+
+ 
