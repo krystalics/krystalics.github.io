@@ -40,4 +40,163 @@ Collections.reverse(list);  怎么有reverse不将其放进 ArrayList的方法�
 
  
 
- 
+4. ##### MySQL 的慢查找
+
+今天去电信现场初步面试问到的问题，我真是两眼一抹黑啊。听都没听过，感觉和我不是一个技术栈的，，，，继续努力。
+
+MySQL通过慢查询日志定位那些执行效率较低的SQL 语句，用--log-slow-queries[=file_name]选项启动时，mysqld 会写一个包含所有执行时间超过long_query_time 秒的SQL语句的日志文件，通过查看这个日志文件定位效率较低的SQL 。
+
+慢查询主要体现在慢上，通常意义上来讲，只要返回时间大于 >1 sec上的查询都可以称为慢查询。慢查询会导致CPU，内存消耗过高。数据库服务器压力陡然过大，那么大部分情况来讲，肯定是由某些慢查询导致的。
+
+slow_query_log
+
+这个参数设置为ON，可以捕获执行时间超过一定数值的SQL语句。
+
+long_query_time
+
+当SQL语句执行时间超过此数值时，就会被记录到日志中，建议设置为1或者更短。
+
+slow_query_log_file
+
+记录日志的文件名。
+
+log_queries_not_using_indexes
+
+这个参数设置为ON，可以捕获到所有未使用索引的SQL语句，尽管这个SQL语句有可能执行得挺快。
+
+
+
+5. ##### Collection和Collections的区别
+
+**Collection是集合接口**。它提供了对集合对象进行基本操作的通用接口方法。Collection接口在Java 类库中有很多具体的实现。Collection接口的意义是为各种具体的集合提供了最大化的统一操作方式。
+
+**Collections 是一个包装类。**它包含有各种有关集合操作的**静态多态方法**。此类**不能实例化**，就像一**个工具类**，服务于Java的Collection框架
+
+
+
+6. ##### AOP与IoC 
+
+AOP是面向切面编程：把与主业务无关的部分放到代码外面去做，就像是权限验证（React的高阶组件就是这么个理念），与代理类似：参考知乎的一个回答： <https://www.zhihu.com/question/24863332>   下面是一段静态代理，由我们自己实现
+
+```java
+class UserControllerProxy {  //代理模式，写一个新的类来代替原来类的工作，在其基础上修改或添加功能
+    private UserController userController;
+    
+    public void saveUser() {
+        checkAuth(); //验证权限
+        userController.saveUser();  // 然后再进行Controller的操作
+    }
+}
+```
+
+通俗点来说就是，本来要执行的任务被截断了由AOP来负责。类似于拦截器，过滤器，二者的区别后面再说。
+
+**Spring AOP是基于动态代理** 如果要代理的对象，**实现了某个接口**，那么Spring AOP会使用**JDK Proxy**，去创建代理对象，而对于没有实现接口的对象，就无法使用JDK Proxy去进行代理了（因为JDK代理是创建一个实现了被代理类父类的子类，口语化来说，就是实现它的兄弟类）；这时候Spring AOP会使用**Cglib**，生成一个被代理对象的子类，来作为代理。  这里可以参考： [另一篇文章Java代理](<https://krystalics.github.io/2018/11/06/java%E4%BB%A3%E7%90%86%E4%B8%8EAOP/>)
+
+
+
+IoC：控制反转，这个概念不是Spring独有的，而是面向对象语言的一种解耦方式。本来调用一个对象的（非静态）方法需要new出这个对象，但是项目一大起来，对象之间的依赖关系比较复杂，容易出错。所以才出了IoC，把对象的生命周期管理集中了起来交给Spring，有需要用的时候就放出来。
+
+```java
+public interface S{
+    
+}
+public class A implements{
+    
+}
+
+public class B{ //假设B需要调用A的某些方法，并不直接new，而是通过他的父类接口来操作，
+    private S s;
+    public B(S s){
+        this.s=s;  //
+    }
+}
+```
+
+
+
+7. ##### 拦截器和过滤器
+
+ Filter可以认为是Servlet的一种“加强版”，它主要用于对用户请求进行预处理，也可以对HttpServletResponse进行后处理，是个典型的处理链使用Filter完整的流程是：Filter对用户请求进行预处理，接着将请求交给Servlet进行预处理并生成响应，最后Filter再对服务器响应进行后处理。
+
+拦截是AOP的一种实现策略，拦截器是动态拦截Action调用的对象。它提供了一种机制可以使开发者可以定义在一个Action执行的前后执行的代码，也可以在一个Action执行前阻止其执行。同时也提供了一种可以提取Action中可重用的部分的方式。拦截器将Action共用的行为独立出来，在Action执行前后执行
+
+**区别：**
+
+- Filter是基于函数回调的，而Interceptor则是基于Java反射的。
+- Filter依赖于Servlet容器，而Interceptor不依赖于Servlet容器。
+- Filter对几乎所有的请求起作用，而Interceptor只能对action请求起作用。
+- Interceptor可以访问Action的上下文，值栈里的对象，而Filter不能。
+- 在action的生命周期里，Interceptor可以被多次调用，而Filter只能在容器初始化时调用一次。
+
+##### 二者执行顺序
+
+过滤前-拦截前-action执行-拦截后-过滤后
+
+
+
+8. ##### ArrayList和LinkedList
+
+ArrayList是实现了基于动态数组的结构，而LinkedList则是基于实现链表的数据结构。ArrayList的所有数据是在同一个地址上,而LinkedList的每个数据都拥有自己的地址.所以在对数据进行查找的时候，由于LinkedList的每个数据地址不一样，get数据的时候ArrayList的速度会优于LinkedList。 **至于增删改查的操作速度 对比链表和数组就可以。**
+
+ArrayList 在JDK1.8中 默认的初始容量=10，`ArrayList<Integer> it=new ArrayList<>(15); 初始容量改为15` 最大容量为 `Integer.MAX_VALUE - 8 `为什么-8 为最后一次扩容准备，可以扩容到`Integer.MAX_VALUE` , ArrayList 自增长的核心代码如下
+
+```java
+private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8 //最大长度
+transient Object[] elementData; //数据
+
+private void grow(int minCapacity) {
+        // overflow-conscious code
+        int oldCapacity = elementData.length;
+        int newCapacity = oldCapacity + (oldCapacity >> 1); //新的容量为原来容量的1.5倍
+        if (newCapacity - minCapacity < 0)  //如果新的容量还是小于最小容量，直接定义为minCapacity
+            newCapacity = minCapacity;
+        if (newCapacity - MAX_ARRAY_SIZE > 0) //如果容量过大,比预定义的最大容量还打，直接扩到整数最大值
+            newCapacity = hugeCapacity(minCapacity); 
+       
+        elementData = Arrays.copyOf(elementData, newCapacity); //新数组获得原数组的数据
+    }
+
+    private static int hugeCapacity(int minCapacity) {
+        if (minCapacity < 0) // overflow  
+            throw new OutOfMemoryError();
+        return (minCapacity > MAX_ARRAY_SIZE) ?
+            Integer.MAX_VALUE :
+            MAX_ARRAY_SIZE;
+    }
+```
+
+
+
+LinkedList 通过内部 的`Node<E>` 来连接前后元素：
+
+```java
+transient Node<E> first;
+
+transient Node<E> last;
+```
+
+
+
+9. ##### 常用Linux命令
+
+cd  ls  mkdir  touch cp mv  rm...
+
+
+
+10. ##### Servlet 
+
+    来自知乎回答 <https://www.zhihu.com/question/21416727>
+
+servlet接口定义的是一套处理网络请求的规范，所有实现servlet的类，都需要实现它那五个方法，其中最主要的是两个生命周期方法 init()和destroy()，还有一个处理请求的service()，也就是说，所有实现servlet接口的类，或者说，所有想要处理网络请求的类，都需要回答这三个问题：
+
+- 你初始化时要做什么
+- 你销毁时要做什么
+- 你接受到请求时要做什么
+
+**你从来不会在servlet中写什么监听8080端口的代码，servlet不会直接和客户端打交道！**
+
+那请求怎么来到servlet呢？答案是servlet容器，比如我们最常用的tomcat，同样，你可以随便谷歌一个servlet的hello world教程，里面肯定会让你把servlet部署到一个容器中，不然你的servlet压根不会起作用。
+
+**tomcat才是与客户端直接打交道的家伙**，他监听了端口，请求过来后，根据url等信息，确定要将请求交给哪个servlet去处理，然后调用那个servlet的service方法，service方法返回一个response对象，tomcat再把这个response返回给客户端。
+
