@@ -193,9 +193,45 @@ for(int i=0;i<n;i++){
 
 
 
+---
 
+之前的内容是前几天写的，后面做笔试题又遇到了类似的背包问题，所以那个问题在拿过来讨论一下，因为当时我并没有什么好的思路。
 
+>  题目：将一数组分为两个数组并使它们的和相等，如果不能做到这点就返回-1。能的话就返回两个数组。与之相似的还有 LeetCode中的用相同均值划分一个数组为两个
 
+在网上更常见的是另一题：把一组数据切成两组数据，使两组数据和之差的绝对值最小。上面一题相当于是这题的子问题了
 
+回答是：假设数组和为sum，要求两个子数组差最小，就是用数组里的数去填满一个容量为sum/2的包
 
+设 `int [][]f=new int[length+1][sum/2+1]`  `f[i][j]`表示array中i个元素的和<=j ，且是最接近j的元素集合。 
+
+状态方程为 `f[i][j]=Max(f[i-1][j-array[i]]+array[i],f[i-1][j])` `f[i-1][j-array[i]]+array[i]` 表示array中i-1个元素的和最接近 j-array[i] 所以 `f[i-1][j-array[i]]+array[i]`和`f[i-1][j]` 中最大的那个才是`f[i][j]` 因为它的定义就是i个元素的和要最接近j，越大自然越好
+
+```java
+int temp[][]=new int[arr.length+1][sum/2+1];
+for(int i=0;i<arr.length;i++){
+    for(int j=1;j<=sum/2;j++){
+        temp[i+1][j]=temp[i][j];
+        if(arr[i]<=j&&temp[i][j-arr[i]]+arr[i]>temp[i][j]){
+            temp[i+1][j]=temp[i][j-arr[i]]+arr[i];
+        }
+    }
+}
+//temp[arr.length][sum/2] 即是该子数组的和，
+```
+
+那么如何知道两个子数组的成员呢？我们应该再配套一个记录的数组，将`temp[i][j]` 记录下来，用于返回。定义 `path[i]`为`temp[i][j]`的记录数组，记录它的数据
+
+```java
+int temp[][]=new int[arr.length+1][sum/2+1];
+int path[][]=new int[arr.length+1][arr.length+1];
+for(int i=0;i<arr.length;i++){
+    for(int j=1;j<=sum/2;j++){
+        temp[i+1][j]=temp[i][j];
+        if(arr[i]<=j&&temp[i][j-arr[i]]+arr[i]>temp[i][j]){
+            temp[i+1][j]=temp[i][j-arr[i]]+arr[i];
+        }
+    }
+}
+```
 
