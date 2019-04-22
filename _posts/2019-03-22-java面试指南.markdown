@@ -4,9 +4,7 @@
 
 ---
 
-
-
-1. ##### Cookie和Session的区别
+##### Cookie和Session的区别
 
 由于HTTP协议是无状态的协议，所以服务端需要记录用户的状态时，就需要用某种机制来识具体的用户，这个机制就是Session.
 
@@ -18,7 +16,7 @@
 
  
 
-2. ##### 为什么Redis是单线程的
+##### 为什么Redis是单线程的
 
 redis 几乎完全是在内存中进行操作的，速度比使用硬盘的数据库要快得多。多线程的上下文的切换，对于一个内存的系统来说，消耗比较大，而且多线程需要各种锁来保证线程安全，对速度有影响。所以因为单线程的Redis够快，所以不需要多线程来并发操作。
 
@@ -34,7 +32,7 @@ Redis 文章：
 
 <http://database.51cto.com/art/201809/584266.htm#topx> 
 
-3. ##### 怎么将一个ArrayList倒序输出
+##### 怎么将一个ArrayList倒序输出
 
 Collections.reverse(list);  怎么有reverse不将其放进 ArrayList的方法中，而是要另外放在Collections的静态变量中。
 
@@ -42,7 +40,7 @@ Collections.reverse(list);  怎么有reverse不将其放进 ArrayList的方法�
 
  
 
-4. ##### MySQL 的慢查找
+##### MySQL 的慢查找
 
 今天去电信现场初步面试问到的问题，我真是两眼一抹黑啊。听都没听过，感觉和我不是一个技术栈的，，，，继续努力。
 
@@ -68,7 +66,7 @@ log_queries_not_using_indexes
 
 
 
-5. ##### Collection和Collections的区别
+##### Collection和Collections的区别
 
 **Collection是集合接口**。它提供了对集合对象进行基本操作的通用接口方法。Collection接口在Java 类库中有很多具体的实现。Collection接口的意义是为各种具体的集合提供了最大化的统一操作方式。
 
@@ -76,7 +74,7 @@ log_queries_not_using_indexes
 
 
 
-6. ##### AOP与IoC 
+##### AOP与IoC 
 
 AOP是面向切面编程：把与主业务无关的部分放到代码外面去做，就像是权限验证（React的高阶组件就是这么个理念），与代理类似：参考知乎的一个回答： <https://www.zhihu.com/question/24863332>   下面是一段静态代理，由我们自己实现
 
@@ -117,7 +115,7 @@ public class B{ //假设B需要调用A的某些方法，并不直接new，而是
 
 
 
-7. ##### 拦截器和过滤器
+##### 拦截器和过滤器
 
  Filter可以认为是Servlet的一种“加强版”，它主要用于对用户请求进行预处理，也可以对HttpServletResponse进行后处理，是个典型的处理链使用Filter完整的流程是：Filter对用户请求进行预处理，接着将请求交给Servlet进行预处理并生成响应，最后Filter再对服务器响应进行后处理。
 
@@ -137,7 +135,7 @@ public class B{ //假设B需要调用A的某些方法，并不直接new，而是
 
 
 
-8. ##### ArrayList和LinkedList
+##### ArrayList和LinkedList
 
 ArrayList是实现了基于动态数组的结构，而LinkedList则是基于实现链表的数据结构。ArrayList的所有数据是在同一个地址上,而LinkedList的每个数据都拥有自己的地址.所以在对数据进行查找的时候，由于LinkedList的每个数据地址不一样，get数据的时候ArrayList的速度会优于LinkedList。 **至于增删改查的操作速度 对比链表和数组就可以。**
 
@@ -180,15 +178,15 @@ transient Node<E> last;
 
 
 
-9. ##### 常用Linux命令
+##### 常用Linux命令
 
 cd  ls  mkdir  touch cp mv  rm...
 
 
 
-10. ##### Servlet 
+##### Servlet 
 
-    来自知乎回答 <https://www.zhihu.com/question/21416727>
+来自知乎回答 <https://www.zhihu.com/question/21416727>
 
 servlet接口定义的是一套处理网络请求的规范，所有实现servlet的类，都需要实现它那五个方法，其中最主要的是两个生命周期方法 init()和destroy()，还有一个处理请求的service()，也就是说，所有实现servlet接口的类，或者说，所有想要处理网络请求的类，都需要回答这三个问题：
 
@@ -204,7 +202,7 @@ servlet接口定义的是一套处理网络请求的规范，所有实现servlet
 
 
 
-##### 11.各种编码的情况     [来自osChina的一篇文章](https://my.oschina.net/liting/blog/470021)
+##### 各种编码的情况     [来自osChina的一篇文章](https://my.oschina.net/liting/blog/470021)
 
 我们都知道**ASCII**码只有8位编码，前127位只用来存储英文符号。后来中国接入计算机世界的时候ASCII自然不能满足要求，于是**GB2312**诞生：规定：一个小于127的字符的意义与原来相同，但**两个大于127**的字符连在一起时，就表示一个汉字，前面的一个字节（他称之为高字节）从0xA1用到0xF7，后面一个字节（低字节）从0xA1到0xFE，这样我们就可以组合出大约7000多个简体汉字了。GB2312是对ASCII的中文扩展
 
@@ -232,7 +230,7 @@ UTF-8的编码规则很简单，只有二条：
 
 
 
-##### 12.域名劫持 [来自掘金的一篇文章](https://juejin.im/post/59ba146c6fb9a00a4636d8b6)
+##### 域名劫持 [来自掘金的一篇文章](https://juejin.im/post/59ba146c6fb9a00a4636d8b6)
 
 HTTP发起一个请求：当我们在浏览器请求一个www.baidu.com 的域名时
 
@@ -274,9 +272,11 @@ LIKE**'abc%‘**，MySQL将使用索引；
 
 如果某个数据列里包含许多重复的值，就算为它建立了索引也不会有很好的效果。比如说，如果某个数据列里包含的净是些诸如“0/1”或“Y/N”等值，就没有必要为它创建一个索引。
 
+**复合索引:** Mysql从左到右的使用索引中的字段，一个查询可以只使用索引中的一部份，但只能是最左侧部分。 例如索引是key index (a,b,c). 可以支持a | a,b| a,b,c 3种组合进行查找，但不支持 b,c进行查找 .当最左侧字段是常量引用时，索引就十分有效复合索引可以只使用复合索引中的一部分，但必须是由最左部分开始，且可以存在常量。
 
 
-##### 14.保证分布式事务的执行  
+
+##### 保证分布式事务的执行  
 
 [from 掘金](https://juejin.im/post/5b5a0bf9f265da0f6523913b)
 
@@ -302,7 +302,7 @@ UndoLog的原理很简单，为了满足事务的原子性，**在操作任何�
 
 
 
-15. ##### Forward 转发 和 Redirect 重定向 [博客园的文章](https://www.cnblogs.com/selene/p/4518246.html)
+##### Forward 转发 和 Redirect 重定向 [博客园的文章](https://www.cnblogs.com/selene/p/4518246.html)
 
 Forward是基于服务端，Redirect是基于客户端。
 
@@ -338,7 +338,7 @@ public void doGet(HttpServletRequest request,HttpServletResponse response){
 
 
 
-16. ##### 进程创建的步骤
+##### 进程创建的步骤
 
 1.申请空白的PCB 进程控制块
 
