@@ -4,21 +4,71 @@
 
 ##### 1.hashmap的数据结构，扩容的情况
 
-##### 2.currentHashMap与hashtable的区别(二者都是线程同步)
+​	它的结构和HashSet是一致的，都是散列表。
 
-##### 3.线程的生命周期，sleep()和wait()的区别
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/13.png?raw=true">
+
+​	扩容策略和HashSet也是一样的，当散列表中的位置被占据超过75%(加载因子默认是0.75，用于扩容的因子)，就会扩容，过程如下：创建一个新的HashMap容量是原来的两倍，将原来的hashmap中的元素复制过去。
+
+##### 2.ConcurrentHashMap与hashtable的区别(二者都是线程同步)
+
+[从ConcurrentHashMap的演进看java多线程核心技术](http://www.jasongj.com/java/concurrenthashmap/)
+
+​	Hashtable是对整个对象加锁，当Hashtable的大小增加到一定的时候，性能急剧下降，因为迭代时需要被锁定很长时间。
+
+​	**jdk1.7**的时候ConcurrentHashMap引入了分割(Segment，继承了[ReentrantLock](https://blog.csdn.net/lipeng_bigdata/article/details/52154637)，很方便对每个Segment上锁)，把一个大的HashMap拆分成N个小的Hashtable，在put方法中，会根据hash()
+
+##### 3.线程的生命周期，sleep()和wait()的区别，java线程和操作系统的线程之间的区别
+
+[Java中sleep()与wait()](https://blog.csdn.net/u012050154/article/details/50903326)
+
+[Java与线程](https://www.imooc.com/article/257138) [java线程是用户级的吗](https://www.zhihu.com/question/23096638)
+
+生命周期：new，Runnable，等待，计时等待，阻塞，终止
+
+sleep()：是正在执行的线程主动让出CPU，并不释放资源，过了指定时间之后继续执行。**可以在任何地方使用**
+
+wait()：让当前线程退出同步资源锁，以便其他正在等待该资源的线程能够获取，只有调用了notify()方法才能够让它恢复过来，去参与竞争同步资源锁。**只能在同步块或同步方法中使用**
 
 ##### 4.Hibernate的缓存
 
+[Hibernate缓存机制](https://www.jianshu.com/p/4ebf4b3b8e96)
+
 ##### 5.JVM的结构划分
+
+[JVM内存结构](https://www.cnblogs.com/ityouknow/p/5610232.html)
+
+[JVM内存结构和Java内存模型](https://zhuanlan.zhihu.com/p/38348646)
 
 ##### 6.MySQL隔离级别，join查询时采用的索引，聚簇索引
 
+[MySQL隔离级别](https://www.jianshu.com/p/4e3edbedb9a8)
+
+[对聚簇索引和非聚簇索引的认识](https://blog.csdn.net/alexdamiao/article/details/51934917)
+
 ##### 7.线程池
+
+[jdk1.8下的线程池](https://juejin.im/post/5bac78ce6fb9a05cee1ded19)
+
+[Java中线程池，你真的会用吗？](https://www.hollischuang.com/archives/2888)
 
 ##### 8.GC算法
 
+[JVM垃圾收集与GC算法](https://www.jianshu.com/p/43c1b262d36b)
+
+[Java GC算法 垃圾收集器](http://www.importnew.com/23752.html)
+
 ##### 9.DB连接池
 
+[数据库连接池的实现及原理](https://juejin.im/post/5af026a06fb9a07ac47ff282)
+
+[数据库连接池技术详解](https://juejin.im/post/5b7944c6e51d4538c86cf195)
+
 ##### 10.堆排序算法掌握
+
+
+
+##### 11.内存限制下，找出2GB文件中最大的100个数字和重复次数最多的100个字符串。
+
+[经典面试问题: Top K 之 ---- 海量数据找出现次数最多或，不重复的。](https://juejin.im/post/5aa0ee9f518825557c010bc0)
 
