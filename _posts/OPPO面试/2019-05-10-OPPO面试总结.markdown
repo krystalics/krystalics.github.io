@@ -8,11 +8,17 @@
 
 <img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/13.png?raw=true">
 
-​	扩容策略和HashSet也是一样的，当散列表中的位置被占据超过75%(加载因子默认是0.75，用于扩容的因子)，就会扩容，过程如下：创建一个新的HashMap容量是原来的两倍，将原来的hashmap中的元素复制过去。
+**寻址方式：**HashMap将Key的哈希值对数组长度取模，结果作为该Entry在数组的index。在计算机中**取模的代价远高于位运算**，因此HashMap要求数组的长度必须为2的N次方（它默认的长度=16，而且扩容也都是两倍）。此时将Key的哈希值对2^N -1进行运算，其效果等同于取模。
+
+HashMap并不要求用户在指定HashMap容量时必须传入2的N次方整数，而是通过其他方法对传入的容量进行校正，至2的N次方倍。
+
+当HashMap的size超过Capacity*loadFactor时，需要对HashMap进行扩容。具体方法是创建一个新的，长度为原来两倍的数组，保证Capacity仍为2的N次方，同时需要通过如下transfer方法将原来的数据重新插入到新的HashMap中 (rehash过程)
+
+
 
 ##### 2.ConcurrentHashMap与hashtable的区别(二者都是线程同步)
 
-[从ConcurrentHashMap的演进看java多线程核心技术](http://www.jasongj.com/java/concurrenthashmap/) 看到这篇文章的时候，我不禁感慨我距离大神的距离好遥远啊。
+本段转发自[**技术世界**](http://www.jasongj.com/)，[原文链接](http://www.jasongj.com/java/concurrenthashmap/)　<http://www.jasongj.com/java/concurrenthashmap/>
 
 ​	Hashtable是对整个对象加锁，当Hashtable的大小增加到一定的时候，性能急剧下降，因为迭代时需要被锁定很长时间。
 
@@ -55,7 +61,7 @@ static final int spread(int h){
 
 **同步方式**：
 
-**对于put操作**，如果Key对应的数组元素为null，则通过[CAS操作](http://www.jasongj.com/java/thread_safe/#CAS%EF%BC%88compare-and-swap%EF%BC%89)将其设置为当前值。如果Key对应的数组元素(即链表表头或者树的根元素)不为null，则对该元素使用synchronized关键字申请锁，然后进行操作。如果put操作使得当前链表长度超过一定阈值，则该链表转换为树，用以提高寻址效率。
+**对于put操作**，如果Key对应的数组元素为null，则通过[CAS操作](<https://juejin.im/post/5a73cbbff265da4e807783f5>)将其设置为当前值。如果Key对应的数组元素(即链表表头或者树的根元素)不为null，则**对该元素使用synchronized关键字申请锁**，然后进行操作。如果put操作使得当前链表长度超过一定阈值，则该链表转换为树，用以提高寻址效率。
 
 **对于读操作**，由于数组被volatile关键字修饰，因此不用担心数组可见性的问题。同时每个元素是一个Node实例(Java 7中每个元素是HashEntry)，它的Key值和hash值都有final修饰，不可变更，无须关心他们被修改之后的可见性。
 
@@ -85,7 +91,9 @@ static final <K,V> Node<K,V> tabAt(Node<K,V> []tab,int i){
 
 [Java中sleep()与wait()](https://blog.csdn.net/u012050154/article/details/50903326)
 
-[Java与线程](https://www.imooc.com/article/257138) [java线程是用户级的吗](https://www.zhihu.com/question/23096638)
+[Java与线程](https://www.imooc.com/article/257138) 该文章说是转载联系作者，但是打开原文链接却是404。
+
+ [java线程是用户级的吗](https://www.zhihu.com/question/23096638)
 
 生命周期：new，Runnable，等待，计时等待，阻塞，终止
 
@@ -93,21 +101,258 @@ sleep()：是正在执行的线程主动让出CPU，并不释放资源，过了�
 
 wait()：让当前线程退出同步资源锁，以便其他正在等待该资源的线程能够获取，只有调用了notify()方法才能够让它恢复过来，去参与竞争同步资源锁。**只能在同步块或同步方法中使用**
 
+
+
+**java与线程：**
+
+线程是CPU调度的基本单位，Thread类与大部分Java API都有显著区别，它的所有关键方法都是Native的(Native是用于和其他语言交互的，例如C++，使用这个关键字意味着这个方法和程序运行的平台有关，比如操作系统的内核，调度算法等等) 。大约分为**三种线程**：
+
+**内核线程(Kernel-Level Thread,KLT)**
+
+很明显这是由操作系统内核直接支持的线程。由内核来完成线程切换，内核通过操纵调度器Sheduler对线程进行调度，并负责将线程的任务映射到各个CPU上。每个内核线程都可以视为内核的一个分身，这样OS就有能力同时处理多件事情，支持多线程的内核就叫多线程内核(Multi-Threads Kernel) 
+
+我们的Java程序一般不会直接去使用KLT，转而使用KLT的接口——轻量进程(Light Weight Process,LWP)即我们通常意义上的线程。由于每个LWP都有一个KLT支持，因此只有先支持KLT才能有LWP。**这种1:1的关系称为一对一的线程模型。**
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/16.jpg?raw=true">
+
+也由于是基于KLT实现的，所以各种线程操作，如创建，构析及同步都需要进行**系统调用**。而系统调用的代价相对较高，需要在**用户态和内核态中来回切换**。其次，每个LWP都需要有一个KLT支持，因此LWP要消耗一定内核资源(比如KLT的栈空间)，因此一个系统支持的**LWP的数量是有限的**。
+
+
+
+**用户线程**由于创建，切换，调度各种细节都需要考虑，实现起来极其困难。已经被Java，Ruby等语言放弃了。
+
+
+
+**用户线程混合LWP**
+
+用户线程完全建立在用户空间(在内存中除了操作系统所处的内核空间外的空间叫做用户空间)。因此用户线程的创建，切换，析构等操作依然廉价并且可以支持大规模的用户线程并发。操作系统提供支持的LWP则作为用户线程和内核线程之间的桥梁。这样可以使用内核提供的线程调度功能及CPU映射，并且用户线程的系统调用要通过LWP来完成，大大降低了整个进程被完全阻塞的风险。
+
+在这种混合模式中，用户线程与LWP的数量比不确定，即为N:M的关系。许多Unix系统如Solaris，HP-UX等都提供了N:M的线程模型实现。
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/17.jpg?raw=true">
+
+
+
+**Java线程**
+
+操作系统支持怎样的线程模型，在很大程度上决定了JVM的线程是怎样映射的，这一点在不同的平台上没有办法达成一致，**JVM中也没有规范Java线程需要使用哪个线程模型来实现。**线程模型只对线程的并发规模和操作成本产生影响，对Java程序的编码和运行过程都是透明的。
+
+对于Sun公司的JDK来说，它的Windows版与Linux版都是使用1:1的线程模型实现。一条Java线程映射一条LWP，因为Windows和Linux系统提供的线程模型就是1对1的。而Solaris平台中，由于操作系统的线程特性可以同时支持一对一以及多对多，所以Solaris的JDK对应的提供了两个平台专有的参数来明确指定使用哪种线程模型。
+
+
+
 ##### 4.Hibernate的缓存
 
-[Hibernate缓存机制](https://www.jianshu.com/p/4ebf4b3b8e96)
+[Hibernate缓存机制](https://www.jianshu.com/p/4ebf4b3b8e96)  [Hibernate的缓存](https://juejin.im/post/5b39c8ccf265da59a4020374)
+
+Hibernate缓存包括两大类：Hibernate一级缓存（存放在栈中）和二级缓存（存放在堆中）。
+
+一级缓存又称为Session缓存：Session内置不能被卸载，Session的缓存是事务范围的缓存(Session的生命周期对应一个数据库事务或者一个应用事务)。一级缓存中，持久化类的每个实例都有唯一的OID。
+
+当获取Session对象时，就可以使用一级缓存了。 *每个SpringBoot的版本不一样，代码也会发生变化*
+
+```java
+@PersistenceContext
+private EntityManager entityManager;
+---
+HibernateEntityManager hem=(HibernateEntityManager)entityManager;
+Session session=hem.getSession();
+```
+
+缓存状态分为三种：
+
+**瞬时状态**：创建一个POJO，还未将对象数据保存到数据库中时，Session中也没有当前POJO实例。
+
+```java
+Account account=new Account();
+account.setPhone("123");  //这时实例并没有保存
+```
+
+**持久状态**：POJO对象被添加到Session缓存中，数据库中也有对应数据
+
+```java
+public int saveStatus(Account account){
+    account.save(); //保存到数据库中
+    Session session=....getSession();
+	int id=session.save(account);
+    account.setPhone("23213"); //修改被持久化的POJO
+    return id; //返回对象id
+}
+
+```
+
+注意上述代码并没有保存到数据库中的代码，这里会执行两条SQL语句，一条添加SQL，另一条修改SQL （Hibernate被持久化的POJO对象在被重新赋值时会触发更新操作）
+
+**脱管状态**：在缓存中已经被持久化的POJO对象，对它执行了evict方法，将POJO对象从缓存中剥离出来，但是数据库中还有数据。
+
+
+
+**二级缓存又称SessionFactory的缓存**：由于SessionFactory对象的生命周期和引用程序整个过程对应，因此Hibernate二级缓存是进程范围或者集群范围的缓存，有可能出现并发问题，因此需要采用适当的并发访问策略，该策略为被缓存的数据提供了事务隔离级别。 二级缓存是可选的，可以不配置它，默认情况下是关闭的。配置需要一定的流程，这里就不详细讲了。
+
+获取代码如下：*每个SpringBoot的版本不一样，代码也会发生变化*
+
+```java
+@Autowired
+private EntityManagerFactory entityManagerFactory;
+---
+SessionFactory sf=entityManagerFactory.unwrap(SessionFactory.class);
+```
+
+
+
+适用于：
+
+- 很少被修改的数据
+- 不是很很重要的数据，允许偶尔出现并发的数据
+- 不会被并发访问的数据
+- 常量数据
+
+Hibernate的查询分为两类：1.得到当个对象，2.得到一个结果集
+
+单个对象：
+
+get()和load()方法的区别在于对二级缓存的使用上。load()方法会使用二级缓存，get()方法在一级缓存没有找到的情况下会直接查询数据库连接，不会去二级缓存中找。
+
+```java
+Employee em1=session.load(Employee.Class,9);
+Employee em2=session.get(Employee.Class,9);
+```
+
+结果集对象：
+
+```java
+Query query = session.createQuery("from Customers");
+List<Customers> list=query.list();
+Iterator<Customers> iter=query.iterator();
+```
+
+**list()**在执行时，直接运行查询结果所需要的查询语句，而**iterator()**则是先执行得到对象ID的查询语句。然后再根据每个ID值去查询所要查询的对象。因此list()的查询通常会只执行一个SQL语句，而Iterator()的查询可能需要执行N+1条SQL语句。
+
+list()只能使用二级缓存中的查询缓存，而无法使用二级缓存对单个对象的缓存(但是会把查询对象放入二级缓存)，所以除非重复执行相同的查询操作，否则无法利用缓存机制来提高查询效率。而且当结果集过大时，很容易造成内存溢出。
+
+iterator()方法可以充分利用二级缓存，在根据ID检索对象(详细情况在下一段)的时候首先到缓存中查找，如果找不到才执行SQL语句。在执行时不会一次初始化所有对象，而是根据结果集的访问情况来初始化对象。因此在访问中可以控制缓存中对象的数量，避免内存占用过多而溢出。
+
+Hibernate根据ID访问数据对象的时候，首先从Session一级缓存中查找；查不到，如果配置了二级缓存就从二级缓存中查。如果都查不到，在查询数据库，把结果按照ID放入到缓存删除，更新，增加数据的时候，同时更新缓存。
+
+
 
 ##### 5.JVM的结构划分
+
+[Java新生代，老年代..](https://gblog.sherlocky.com/java-xin-sheng-dai-lao-nian-dai/)
 
 [JVM内存结构](https://www.cnblogs.com/ityouknow/p/5610232.html)
 
 [JVM内存结构和Java内存模型](https://zhuanlan.zhihu.com/p/38348646)
 
+JVM的内存结构大致如下：
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/17.png?raw=true">
+
+- 堆(Heap)：线程共享。所有对象实例以及数组都要在堆上分配。回收器主要管理的对象
+- 方法区(Method Area)：线程共享。存储类信息，常量，静态变量，即时编译器JIT编译的代码
+- 栈(JVM Stack)：线程私有。存储局部变量表，操作栈，动态链接，方法出口，对象指针
+- 本地方法栈(Native Method Stack)：线程私有。为JVM使用的Native方法服务。如Java使用C++编写接口服务时，代码在此区运行
+- 程序计数器(Program Counter Register)：线程私有。也叫PC寄存器，它可以看作是当前线程所执行的字节码的行号指示器。指向下一条要执行的指令。
+
+下图是具体的内存分布和控制参数：图片来自网络
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/18.png?raw=true">
+
+**控制参数：**
+
+- -Xms 设置堆的最小空间大小
+- -Xmx 设置堆的最大空间大小
+- -XX:NewSize 设置新生代最小空间大小
+- -XX:MaxNewSize 设置新生代最大空间大小
+- -XX:PermSize 设置永久代最小空间大小
+- -XX:MaxPermSize 设置永久代最大空间大小
+- -Xss 设置每个线程的堆栈大小
+- 老年代空间大小=堆空间大小-年轻代空间大小
+
+
+
+从一个更高的维度看JVM和系统调用之间的关系
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/19.png?raw=true">
+
+**堆**
+
+对于大多数应用来说，Java堆是Java虚拟机所创建的内存中最大的一块。被所有线程共享，且在虚拟机启动的时候就创建，堆的作用是存放对象实例和数组。
+
+它还是垃圾收集器管理的主要区域，因此很多时候也被称作GC堆。如果从内存回收的角度看，由于现代的**收集器都是采用分代收集算法**，所以又将其细分：分为**新生代**和**老年代**。新生代又可以分为**Eden**空间，**From Survivor** 空间 (s0)，**To Survivor** 空间 (s1)。默认情况下按照 8:1:1的比例分配空间大小。
+
+根据JVM规范，堆可以处于物理上不连续的内存空间中，只要逻辑上是连续的即可，就像我们的磁盘空间一样。在实现时既可以是固定大小，也可以是可扩展的，不过当前的主流虚拟机都是按照可扩展来实现的(通过-Xmx,-Xms来控制)  。如果在堆中没有足够的内存来完成实例初始化，并且堆也无法再扩展了，将会抛出`OutOfMemoryError`异常。
+
+**所有新生成的对象首先都是放在新生代**。而且应用程序只使用**eden**和其中一个**Survivor**，当初级垃圾回收时，Minor GC挂起程序，**将eden和Survivor中的存活对象**复制到另一个**非活动的Survivor**中，然后一次性清除eden和Survivor，**将原来的非活动Survivor标记成活动Survivor**。将**指定次数回收后仍然存在的对象移动到老年代中**，初级回收之后得到一个空的可用的Eden。
+
+
+
+**方法区**
+
+和堆一样，是各个线程共享的内存区域。虽然JVM规范把方法区描述为堆的一个逻辑部分，但它也被叫做Non-heap 非堆，目的应该是与堆区分开来。
+
+对于习惯在HotSpot虚拟机上开发和部署的开发者来说，很多人也把方法区叫做**永久代(Permanent Generation)**，本质上两者并不等价，仅仅是因为HotSpot虚拟机的设计团队选择把GC分代收集扩展至方法区，或者说使用永久代来实现方法区而已。
+
+**持久代在Java 8中被彻底删除，取代它的叫做 元空间**
+
+在**这个区域还可以不实现垃圾回收**。但是并不是说只要数据进入方法区就真的如永久代的名字一样永久存在，这个区域的**内存回收目标主要是常量池的回收和对类型的卸载**，一般来说这个区域的回收效果并不是很好，尤其是类型的卸载条件相当苛刻，但是这部分的回收确实有必要。
+
+
+
+**程序计数器**
+
+由于JVM的多线程是通过线程轮流切换并分配CPU执行时间的方式实现的，在任何确定时刻一个CPU(相当于多核处理器的一个内核)只会执行一条线程中的指令。因此为了线程切换后能够恢复到正确执行的位置，每条线程都需要一个独立的程序计数器，各条线程之间的计数器互不影响，独立存储。 
+
+如果线程正在执行Java方法，这个计数器记录的是正在执行的虚拟机字节码指令的位置；如果是Native方法，计数器值为空(Undefined) 次内存区域是JVM规范中唯一一个没有规定任何`OutOfMemoryError`情况的区域。
+
+
+
+
+
 ##### 6.MySQL隔离级别，join查询时采用的索引，聚簇索引
 
-[MySQL隔离级别](https://www.jianshu.com/p/4e3edbedb9a8)
+MySQL隔离级别: 参考自高性能MySQL 第三版
+
+在SQL标准中定义了四种隔离级别，每一种级别都规定了一个事务汇总所做的修改，哪些在事务内和事务间是可见的，哪些是不可见的。较低级别的隔离通常可以执行更高的并发，系统开销也更低。
+
+- Read Uncommitted 未提交读：事务中的修改即使为提交，其他事务也都是可见的。**其他事务可以读取未提交的数据，这也叫做脏读**。这个级别会导致很多问题，而且性能也不必其他级别好太多，所以一般不用这个级别
+- Read  Committed 提交读：大多数数据库的默认隔离级别Read Committed，但是MySQL不是。Read Committed 满足前面隔离性的简单定义：一个事务开始时，只能看见已经提交的事务所做的修改。或者说所做的任何修改在未提交时对其他事务不可见。**也叫做 不可重复读(nonrepeatable read) ，因为两次执行同样的查询可能得到不同结果**
+- Repeatable Read 可重复读：它解决了脏读问题和不可重复读问题，**该级别保证了在同一事务中多次读取同样记录的结果是一致的**。但是理论上，可重复读级别还是无法解决幻读问题。所谓幻读：当某个事务在读取某个范围内的记录时，另一个事务又在该范围内插入新的记录，当之前的事务再次读取该范围的记录时，会产生幻行 。InnoDB和XtraDB存储引擎通过多版本并发控制(MVCC,Multiversion Concurrency Control)解决了幻读问题，它是MySQL的默认事务隔离级别
+- Serializable 可串行化：是最高隔离级别，他通过强制事务串行，避免了前面说的幻读问题。在每一行记录上都加上锁，所以会导致大量超时和锁争用的问题。实际上，很少会用到这个级别，只有在非常需要确保数据一致性而且可以接受没有并发的情况下，才可以考虑该级别。
 
 [对聚簇索引和非聚簇索引的认识](https://blog.csdn.net/alexdamiao/article/details/51934917)
+
+聚簇索引是对磁盘上实际数据重新组织以按指定的一个或多个列的值的排序算法。特点是存储数据的顺序和索引顺序一致。一般情况下主键会默认创建聚簇索引，且一张表只允许存在一个聚簇索引。 索引本身的数据结构是B树，
+
+聚簇索引的叶子就是数据节点，而**非聚簇索引的叶子节点只存放数据的指针，而不是数据本身**。MySQL中不同数据存储引擎对聚簇索引的支持不同，MyISAM是采用非聚簇索引。
+
+
+
+MyISAM引擎的存储方式
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/20.png?raw=true">
+
+MyISAM是按列值与行号来组织索引的。它的叶子节点中保存的实际上是指向存放数据的物理块的指针。从MyISAM存储的物理文件我们看得出，MyISAM引擎的索引文件(.myi)和数据文件(.myd)是相互独立的。
+
+它的二级索引：
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/21.png?raw=true">
+
+而InnoDB按聚簇索引的形式存储数据，所以它的数据布局有着很大的不同。它存储数据的结果大致如下。
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/22.png?raw=true">
+
+注：聚簇索引中的每个叶子节点包含主键值，事务ID，回滚指针(rollback pointer 用于事务和MVCC)，除了主键外的其他 列。
+
+InnoDB的二级索引与主键索引有很大的不同。InnoDB的二级索引的叶子包含主键值，而不是行指针(row pointers) ，这减小了移动数据或者数据页面分裂时维护二级索引的开销，因为InnoDB不需要更新索引的行指针。其结构大致如下：
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/23.png?raw=true">
+
+
+
+InnoDB的二级索引的叶子节点存放的是Key字段加主键值。因此，通过二级索引查询首先查到主键值，然后InnoDB再根据查到的主键值通过主键索引找到相应的数据块。而MyISAM的二级索引叶子节点存放的还是列值与行号的组合，叶子节点中保存的是数据的物理地址。所以可以看出MyISAM的主键索引和二级索引没有任何区别，主键索引仅仅只是一个叫做Primary的唯一，非空的索引，且MyISAM引擎中可以不设主键。
+
+
 
 ##### 7.线程池
 
@@ -120,6 +365,20 @@ wait()：让当前线程退出同步资源锁，以便其他正在等待该资�
 [JVM垃圾收集与GC算法](https://www.jianshu.com/p/43c1b262d36b)
 
 [Java GC算法 垃圾收集器](http://www.importnew.com/23752.html)
+
+GC分为两种：minor GC，Full GC(也称为Major GC)，**Minor GC 是发生在Eden中**的垃圾收集动作，采用的是复制算法。Eden几乎是所有对象出生的地方，即Java对象申请的内存以及存放都是在这个地方。Java中的大部分对象通常不需长久存活，具有朝生夕灭的性质。
+
+当一个对象被判定"死亡"的时候，GC就有责任来回收掉这部分对象的内存空间。Eden是GC收集垃圾的频繁区域。当对象在Eden出生后，在经过一次Minor GC后，如果对象还存活，并且被另一块Survivor区域所容纳，则使用复制算法将这些任然还存活的对象复制到另一块Survivor区域中，然后清理所使用过的Eden和Survivor区域，并且将这些对象的年龄设置为1，以后对象在Survivor区熬过一次Minor GC，就将其年龄+1，当对象的年龄达到某个值时(默认是15岁) 这些对象会搬进老年代。
+
+但是对于较大的对象(即需要分配一块较大的连续内存空间)则是直接进入到老年代。
+
+
+
+**Full GC是发生在老年代**的垃圾收集动作，采用**标记-清除算法**
+
+现实生活中，老年代的人通常会比新生代的人“早死”，堆内存中的老年代不同于这个现象。老年代里的对象几乎都是在Survivor区域中熬过来的，它们并不容易死掉。因此，Full GC发生的次数并不会有Minor GC那么频繁，并且一次Full GC要比进行一次Minor GC的时间要长。
+
+另外，**标记-清除算法**收集垃圾的时候会产生许多内存碎片(即不连续的内存空间)，此后需要为较大的对象分配内存时，若无法找到足够的连续空间时，就会提前触发一次GC的收集动作。
 
 ##### 9.DB连接池
 
