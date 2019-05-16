@@ -244,13 +244,15 @@ Hibernate根据ID访问数据对象的时候，首先从Session一级缓存中�
 
 [JVM内存结构和Java内存模型](https://zhuanlan.zhihu.com/p/38348646)
 
+[Java对象在JVM中的内存分配](https://www.jianshu.com/p/2f295b9f4cd4)
+
 JVM的内存结构大致如下：
 
 <img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/17.png?raw=true">
 
 - 堆(Heap)：线程共享。所有对象实例以及数组都要在堆上分配。回收器主要管理的对象
 - 方法区(Method Area)：线程共享。存储类信息，常量，静态变量，即时编译器JIT编译的代码
-- 栈(JVM Stack)：线程私有。存储局部变量表，操作栈，动态链接，方法出口，对象指针
+- 虚拟机栈(JVM Stack)：线程私有。存储局部变量表，操作栈，动态链接，方法出口，对象指针
 - 本地方法栈(Native Method Stack)：线程私有。为JVM使用的Native方法服务。如Java使用C++编写接口服务时，代码在此区运行
 - 程序计数器(Program Counter Register)：线程私有。也叫PC寄存器，它可以看作是当前线程所执行的字节码的行号指示器。指向下一条要执行的指令。
 
@@ -307,6 +309,45 @@ JVM的内存结构大致如下：
 
 
 
+说完理论部分，让我们来看一个例子：
+
+```java
+public class Student {
+
+    private String name;
+    private static Birthday birthday = new Birthday();
+
+    public Student(String name) {
+        this.name = name;
+    }
+    
+    class Birthday {
+        private int year = 2010;
+        private int month = 10;
+        private int day = 1;
+    }
+
+    public static void main(String[] args) {
+        Student s = new Student("zhangsan");
+        int age = 10;
+        System.out.println(age);
+    }
+}
+
+```
+
+特别说明下：**JVM并不会知道一个类是否为内部类，在Java编译器将Java源码编译到Class文件的过程中，将内部类做了“解糖” ，给其添加了一些必要的转换之后提升为和顶层类一样的形式。**所以下图中的birthday是在堆中的一块内存。
+
+以Student类执行main方法的最后一行来分析该对象在内存中的分配情况
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/33.png?raw=true">
+
+图不是很准确，但是能大致说明问题。
+
+- 局部变量：在虚拟机栈中、基本类型的值直接存储在栈中，如age=10，如果是一个对象，只存储对象的引用如s=ref
+- 实例变量：存放在堆中，如Student类中的实例 name=ref
+- 静态变量：存放在方法区中的常量池中，如Student.class中的，birthday=ref
+
 
 
 ##### 6.MySQL隔离级别，join查询时采用的索引，聚簇索引
@@ -350,7 +391,25 @@ InnoDB的二级索引与主键索引有很大的不同。InnoDB的二级索引�
 
 
 
-InnoDB的二级索引的叶子节点存放的是Key字段加主键值。因此，通过二级索引查询首先查到主键值，然后InnoDB再根据查到的主键值通过主键索引找到相应的数据块。而MyISAM的二级索引叶子节点存放的还是列值与行号的组合，叶子节点中保存的是数据的物理地址。所以可以看出MyISAM的主键索引和二级索引没有任何区别，主键索引仅仅只是一个叫做Primary的唯一，非空的索引，且MyISAM引擎中可以不设主键。
+InnoDB的二级索引的叶子节点存放的是**查询的Key字段加主键值**。因此，通过二级索引查询首先查到主键值，然后InnoDB再根据查到的主键值通过主键索引找到相应的数据块。
+
+而MyISAM的二级索引叶子节点存放的还是列值与行号的组合，叶子节点中保存的是数据的物理地址。所以可以看出**MyISAM的主键索引和二级索引没有任何区别，**主键索引仅仅只是一个叫做Primary的唯一，非空的索引，且MyISAM引擎中可以不设主键。
+
+
+
+例子
+
+```sql
+select * from table1 where name='Bob'; 
+```
+
+首先通过二级索引树找到 Bob 的对应主键15，然后再去主键索引(聚簇索引)中找id=15的数据。
+
+根据数据显示：
+
+1.聚簇索引的查询效率比非聚簇索引的查询效率更高。所以尽量使用主键进行查找。
+
+2.主键定义的长度越小，二级索引的大小就越小，这样每个磁盘块存储的索引数据越多，查询效率越高
 
 
 
@@ -360,37 +419,398 @@ InnoDB的二级索引的叶子节点存放的是Key字段加主键值。因此�
 
 [Java中线程池，你真的会用吗？](https://www.hollischuang.com/archives/2888)
 
+[Java线程池的实现原理](https://mp.weixin.qq.com/s/-89-CcDnSLBYy3THmcLEdQ)
+
+程序的运行，本质上是对系统资源(CPU，内存，磁盘，网络等等)的使用。如何高效的使用这些资源呢？这里说的**线程池就是对CPU利用的优化手段。**
+
+>先来了解一个名词：池化技术。
+>
+>简单点说，就是提前保存大量的资源，以备不时之需。在机器资源有限的情况下使用池化技术可以大大提高资源利用率，提高性能。
+>
+>典型的有：线程池，连接池，内存池，对象池等
+
+
+
+一般我们在并发编程中，使用到线程都是要**手动创建**->**执行任务**->**销毁线程**  这个过程会造成很大的性能开销。如果该**线程执行完任务之后又去执行另一个任务而不是销毁**就可以大大节约开销。这就是通常意义的线程池。
+
+**线程池：预先创建好多个线程，放在池中，这样可以在需要使用线程时直接获取，避免多次重复创建和销毁带来的开销。**具体到Java中就是： 通过BlockingQueue阻塞队列，存放Runnable对象，检查线程队列中的线程，存在线程空闲且未被销毁，继续使用此线程执行任务。
+
+在Java中创建线程池：
+
+```java
+import java.util.concurrent.*;
+
+public class App{
+    public static void main(String[]args) throws Exception{
+        ExecutorService es=new ThreadPoolExecutor(10, //核心线程数
+                                                  10,  //最大线程数量
+       /*非核心线程可以空闲的时间，和下面的TimeUnit组成,这里的意思是60秒*/
+                                                  60L,
+                                                  TimeUnit.SECONDS,
+   /*阻塞队列容量为 10*/          new ArrayBlockingQueue<>(10));
+      
+        //添加任务
+        es.execute(new Runnable(){
+            @Override
+            public void run(){
+                System.println("abce");
+            }
+        });
+        es.shutdown();
+    }
+}
+```
+
+JDK提供给外部的接口也很简单，直接调用`ThreadPoolExecutor`构造一个就好了。也可以通过Executors静态工厂构建，但是一般不建议用这个，因为Executors创建的线程池存在OOM风险。其主要原因是 Executors的任务队列底层是`LinkedBlockingQueue`实现的，
+
+Java中的`BlockingQueue`主要有两种实现，分别是`ArrayBlockingQueue`和`LinkedBlockingQueue`。而`LinkedBlockingQueue`不设置容量的话，默认容量是`Integer.MAX_VALUE`，而采用`Executors`创建线程池的时候并未设置容量，于是我们可以不断的往里面加任务，最终可能导致OOM。
+
+可以看到，开发者想要在代码中使用线程池还是比较简单的。下面让我们进入源码解读一下这个 jdk1.8 下的核心构造器
+
+```java
+ public ThreadPoolExecutor(int corePoolSize,
+                              int maximumPoolSize,
+                              long keepAliveTime,
+                              TimeUnit unit,
+ /*这里传入指定容量的阻塞队列*/    BlockingQueue<Runnable> workQueue,
+                              ThreadFactory threadFactory,
+                              RejectedExecutionHandler handler) {
+        if (corePoolSize < 0 ||
+            maximumPoolSize <= 0 ||
+            maximumPoolSize < corePoolSize ||
+            keepAliveTime < 0)
+            throw new IllegalArgumentException();
+        if (workQueue == null || threadFactory == null || handler == null)
+            throw new NullPointerException();
+     
+     //acc 获取调用上下文
+        this.acc = System.getSecurityManager() == null ?
+                null :
+                AccessController.getContext();
+     //核心线程数量，类比于正式员工数量
+        this.corePoolSize = corePoolSize;
+     //最大线程数量，核心线程+临时线程
+        this.maximumPoolSize = maximumPoolSize;
+     //多余任务等待队列，当线程已经达到最大数量任务还没有做完，就进入这个等待队列
+        this.workQueue = workQueue;
+     //非核心线程的空闲时间，即外包人员等待工作的时间，如果超出这个时间，就将其释放
+        this.keepAliveTime = unit.toNanos(keepAliveTime);
+     //创建线程的工厂，在这个地方可以统一处理创建的线程属性
+     //毕竟每个公司对员工的要求不一样
+        this.threadFactory = threadFactory;
+     //线程池拒绝策略，当任务太多，人也不够，需求池也排满了。
+     //默认是不处理，抛出异常告诉任务提交者，这边忙不过来了
+        this.handler = handler;
+    }
+```
+
+如果把线程池比作公司，公司有正式员工处理正常业务，如果工作量大，会雇佣外包人员。闲时就会释放外包人员来减少公司管理开销。一个公司因为成本关系，雇佣的人员始终是有最大的数量限制。如果已经到达了最大线程数，任务还是处理不过来，就走**需求池 排任务**
+
+在线程池中添加一个任务：execute()
+
+```java
+//Integer.SIZE=32 就是int在java中的字节数
+private static final int COUNT_BITS = Integer.SIZE - 3;  // =29
+private static final int CAPACITY   = (1 << COUNT_BITS) - 1; //容量
+//定义线程状态如下  
+    private static final int RUNNING    = -1 << COUNT_BITS;
+    private static final int SHUTDOWN   =  0 << COUNT_BITS;
+    private static final int STOP       =  1 << COUNT_BITS;
+    private static final int TIDYING    =  2 << COUNT_BITS;
+    private static final int TERMINATED =  3 << COUNT_BITS;
+//原子计算，还是获得线程状态ctl
+private final AtomicInteger ctl = new AtomicInteger(ctlOf(RUNNING, 0));
+
+public void execute(Runnable command) {
+    if (command == null)
+        throw new NullPointerException();
+    
+    int c = ctl.get();
+    // 如果线程池的当前线程数数量小于核心线程数，则创建新的线程执行任务
+    if (workerCountOf(c) < corePoolSize) {
+        if (addWorker(command, true)) //true表示添加的是核心线程
+            return;
+        c = ctl.get();
+    }
+    //判断 线程池是否正在运行并且 任务队列是否允许插入，
+    //插入成功后再次验证新的线程状态下，线程池是否可以运行
+    //如果不在运行，移除插入任务，然后抛出拒绝策略。
+    //如果在运行，且线程池没有线程了，启用一个线程
+    if (isRunning(c) && workQueue.offer(command)) {
+        int recheck = ctl.get();
+        if (! isRunning(recheck) && remove(command))
+            reject(command);
+        else if (workerCountOf(recheck) == 0)
+            addWorker(null, false);
+    }
+    //添加非核心线程 如果失败，直接拒绝。
+    else if (!addWorker(command, false))//false参数表示 添加非核心线程
+        reject(command);
+}
+```
+
+从上述代码中可以看出**addWorker**主要负责创建新的线程并执行任务，代码比较复杂。就不展示出来了。 
+
+- 首先判断是否能够添加工作线程，这个直接判断线程池的状态值 大于等于SHUTDOWN，就不提交任务了，直接返回
+- 然后做自旋，更新创建线程数量。通过判定当前创建的线程是否为核心线程，如果是并且当前线程数小于corePoolSize，则跳出循环，开始创建新的线程。
+
+然后：
+
+- 获取线程池的主锁：线程池的**工作线程通过Worker类实现**，通过ReentrantLock保证安全
+- 添加线程到workers中(即线程池中)
+- 启动新的线程
+
+而workers的声明如下：可以看出**线程池底层的存储结构是一个HashSet**
+
+```java
+private final HashSet<Worker> workers = new HashSet<Worker>();
+```
+
+
+
+**worker处理队列任务**
+
+1.首先判断是否为第一次执行任务，或者从队列中可以获取到任务
+
+2.获取到任务后，执行beforeExecute 做任务前处理
+
+3.执行任务
+
+4.执行afterExecute 做任务后处理
+
+
+
+**线程池总结**：线程池的本质是一个HashSet，多余的任务会放在阻塞队列中。只有当阻塞队列满了之后，才会触发非核心线程的创建。所以非核心线程只是临时打杂的。还提供了两个钩子(beforeExecute,afterExecute)给我们，让我们可以在执行任务前后做一些处理。
+
+它的关键技术是：锁(lock,cas)，阻塞队列，hashSet(资源池)
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/29.png?raw=true">
+
+
+
 ##### 8.GC算法
 
 [JVM垃圾收集与GC算法](https://www.jianshu.com/p/43c1b262d36b)
 
 [Java GC算法 垃圾收集器](http://www.importnew.com/23752.html)
 
-GC分为两种：minor GC，Full GC(也称为Major GC)，**Minor GC 是发生在Eden中**的垃圾收集动作，采用的是复制算法。Eden几乎是所有对象出生的地方，即Java对象申请的内存以及存放都是在这个地方。Java中的大部分对象通常不需长久存活，具有朝生夕灭的性质。
+[GC机制](https://juejin.im/post/5a15be736fb9a044fc4464d6)
+
+Sun公司的JVM采用的是**根搜索算法**来判定哪些对象要被回收；
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/24.png?raw=true">
+
+基本思想是：从一个叫GC Roots的根节点触发，向下搜索，如果一个对象不能够到达GC Roots的话，就说明该对象不再被引用，可以被回收。如上图的Object5,6,7，它们虽然相互引用，但其实已经没有作用了。
+
+GC Roots包括：
+
+- 虚拟机栈中引用的对象
+- 方法区中类静态属性实体引用的对象
+- 方法区中常量引用的对象
+- 本地方法栈中JNI引用的对象
+
+补充概念：在JDK1.2之后引入了四个引用类型：
+
+- 强引用：new出来的对象都是强引用，只要引用还在，GC无论如何都不会回收，即使抛出`OutOfMemoryError`异常
+- 软引用：只有当JVM内存不足时才回收，用来描述一些有用但是不是必须的对象
+- 弱引用：只要发生GC，立马回收，描述非必须对象，强度比软引用更弱。
+- 虚引用：JVM完全忽略虚引用，它唯一的作用就是做一些跟踪记录，辅助finalize函数的使用。
+
+最后总结一下：什么样的类需要被回收
+
+> 1. 该类的所有实例都已经被回收
+> 2. 加载该类的ClassLoad已经被回收
+> 3. 该类的反射类java.lang.Class对象没有被引用
+
+
+
+**现代的GC都是分代收集：在新生代和老年代执行不同的收集算法。**
+
+分为两种：minor GC，Full GC(也称为Major GC)，**Minor GC 是发生在Eden中**的垃圾收集动作，采用的是**复制算法**。Eden几乎是所有对象出生的地方，即Java对象申请的内存以及存放都是在这个地方。Java中的大部分对象通常不需长久存活，具有朝生夕灭的性质。
 
 当一个对象被判定"死亡"的时候，GC就有责任来回收掉这部分对象的内存空间。Eden是GC收集垃圾的频繁区域。当对象在Eden出生后，在经过一次Minor GC后，如果对象还存活，并且被另一块Survivor区域所容纳，则使用复制算法将这些任然还存活的对象复制到另一块Survivor区域中，然后清理所使用过的Eden和Survivor区域，并且将这些对象的年龄设置为1，以后对象在Survivor区熬过一次Minor GC，就将其年龄+1，当对象的年龄达到某个值时(默认是15岁) 这些对象会搬进老年代。
 
 但是对于较大的对象(即需要分配一块较大的连续内存空间)则是直接进入到老年代。
 
+**复制算法：采用的方式是从根节点进行扫描，将存活的对象移动非活动的Survivor中**。当存活对象较少时，复制算法比较高效。
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/25.png?raw=true">
 
 
-**Full GC是发生在老年代**的垃圾收集动作，采用**标记-清除算法**
+
+**Full GC(也叫Major GC)是发生在老年代**的垃圾收集动作，采用**标记-清除算法**
 
 现实生活中，老年代的人通常会比新生代的人“早死”，堆内存中的老年代不同于这个现象。老年代里的对象几乎都是在Survivor区域中熬过来的，它们并不容易死掉。因此，Full GC发生的次数并不会有Minor GC那么频繁，并且一次Full GC要比进行一次Minor GC的时间要长。
 
 另外，**标记-清除算法**收集垃圾的时候会产生许多内存碎片(即不连续的内存空间)，此后需要为较大的对象分配内存时，若无法找到足够的连续空间时，就会提前触发一次GC的收集动作。
 
-##### 9.DB连接池
+**标记-清除算法：采用从根集合开始扫描，将存活对象进行标记，标记完毕之后，再扫描整个空间中未被标记的对象，并进行清除。**
 
-[数据库连接池的实现及原理](https://juejin.im/post/5af026a06fb9a07ac47ff282)
+如图：蓝色是有被引用的部分，褐色是没有被引用的部分。在Marking（标记）阶段需要全盘扫描，
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/26.png?raw=true">
+
+清除之后，出现很多内存碎片：在空间中存活的对象较多时，效率较高。
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/27.png?raw=true">
+
+**标记-压缩算法**：与算法标记-清除算法类似，都是先对存活的对象进行标记。但是**清除之后会把活的对象向左端空闲空间移动，然后再更新引用它们的指针**。弥补了标记-清除算法的缺点，但是成本也增加了，适用于老年代(旧生代)
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/28.png?raw=true">
+
+**标记-整理算法：**也是利用GC树先将所有存活对象标记，但事后续并不是清除，而是直接将存活对象向一端移动，然后再清除掉另一端的内存。和**标记-压缩**相差不多，执行顺序不一样。
+
+
+
+##### 四种垃圾收集器
+
+在JVM中，GC是由垃圾回收器来执行，所以在实际应用场景中，我们需要选择合适的垃圾收集器。
+
+**1.串行收集器(Serial GC)**
+
+最古老，最稳定以及效率高的收集器。在新生代复制算法，老年代标记-压缩；垃圾回收过程会暂停服务。
+
+**2.ParNew GC**
+
+基本**和Serial GC一样，单本质区别是加入了多线程机制**，提高了效率，这样它就可以被用于服务端上，同时它可以与CMS GC配合，所以一般用于server端。**新生代并行，老年代串行。**
+
+**3.Parallel Scavenge GC**
+
+在整个扫描和**复制**过程采用**多线程**的方式进行，适用于多CPU，对暂停时间要求较短的应用，是server级别的默认GC方式。和ParNew类似，但是更加关注吞吐量。
+
+**4.CMS (Concurrent Mark Sweep)收集器**
+
+该收集器的目标是解决Serial GC停顿的问题，**以达到最短回收时间。**常见的B/S架构的应用就适合这种收集器，因为具有高并发，高响应的特点，**CMS基于标记-清除算法。**它的运作比较复杂：
+
+1.初始标记(CMS initial mark): 暂停服务，标记一下GC Roots能直接关联到的对象，速度很快
+
+2.并发标记(CMS concurrent mark)：进行GC Roots Tracing过程
+
+3.重新标记(CMS remark) ：暂停服务，为了修正并发标记期间，因用户程序继续运作而导致标记产生变动的那一部分对象的标记记录，
+
+4.并发清除(CMS concurrent sweep)
+
+**5.G1收集器**
+
+相比CMS收集器有改进，首先**基于标记-压缩算法|标记-整理算法**，不会产生内存碎片，其次可以较精确的控制停顿。和ParNew类似，当新生代的空间占用达到一定比例，开始收集。
+
+**6.Serial Old收集器**
+
+Serial Old是Serial收集器的老年代版本，同样**使用单线程执行收集，使用标记-整理算法**。主要适用Client模式下的虚拟机。
+
+**7.Parallel Old 收集器**
+
+是Parallel Scavenge 收集器的老年代版本，使用多线程和“标记-整理”算法。
+
+
+
+##### 9.DB连接池
 
 [数据库连接池技术详解](https://juejin.im/post/5b7944c6e51d4538c86cf195)
 
-##### 10.堆排序算法掌握
+**数据库连接池技术，即使用来分配，管理，释放数据库连接的**。实际上在简单的数据库应用中，对于数据库的访问不是很频繁，创建一个连接用完之后关闭它，这样做的开销并不是很大。但是如果是一个比较复杂的系统，频繁的建立，关闭连接会极大的降低系统的性能。
+
+连接复用：通过建立一个数据库连接池以及一套连接使用管理策略，使得一个数据库连接可以得到高效，安全的复用，避免了数据库连接频繁建立，关闭的开销。
+
+对于共享资源，有一个很著名的设计模式：资源池。该模式正是为了解决资源频繁分配，释放所造成的问题。把该模式应用到数据库连接管理领域，就是建立一个数据库连接池。
+
+具体原理：在内部对象池中维护一定数量的数据库连接，并对外暴露数据库连接获取和返回方法。`getConnection() 获取连接` `releaseConnection() 返回连接` 。每次有访问的时候，数据库连接池就会给用户分配一个数据库连接，当用户用完了连接之后，连接池再将连接回收。
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/30.png?raw=true">
+
+数据库连接池的优势很明显：
+
+- 资源重用
+- 更快的系统响应速度
+- 新的资源分配方式
+- 统一的连接管理，避免数据库连接泄露
 
 
 
-##### 11.内存限制下，找出2GB文件中最大的100个数字和重复次数最多的100个字符串。
+**自己实现一个简单的数据库连接池**
+
+```java
+
+public class MyPool {
+
+    private final int init_count = 3; //初始化链接数目
+    private final int max_count = 6; //最大连接数量
+    private int current_count = 0; //当前正在使用的连接数
+   
+    //连接池，用来存放初始化链接
+    private LinkedList<Connection> pool = new LinkedList<Connection>();
+
+    //构造函数，初始化一定数量的连接放入连接池
+    public MyPool() {
+        for (int i=0;i<init_count;i++){
+            //记录当前正在使用的连接数
+            current_count++;
+            Connection connection = createConnection();
+            pool.addLast(connection);
+        }
+    }
+
+    //创建新的连接
+    public Connection createConnection() {
+        try {
+            Class.forName("com.mysql.jdbc.Driver");
+            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/keyan","root","root");
+            return connection;
+        }catch (Exception e){
+            System.out.println("数据库链接异常");
+            throw new RuntimeException();
+        }
+    }
+
+    //获取链接
+    public Connection getConnection() {
+        if (pool.size() > 0){
+            //removeFirst删除第一个并且返回
+            return pool.removeFirst();
+        }
+        //如果池中没有连接，并且正在使用的连接要小于最大连接数 
+        if (current_count < max_count){
+            //记录当前使用的连接数
+            current_count++;
+            //创建链接
+            return createConnection();
+        }
+        
+        throw new RuntimeException("当前链接已经达到最大连接数");
+    }
+
+    //释放链接，
+    public void releaseConnection(Connection connection){
+        //如果当前池中的连接数小于初始数量，将该连接收回
+        if (pool.size() < init_count){
+            pool.addLast(connection);
+            current_count--;
+        }else {
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+```
+
+
+
+
+
+##### 10.内存限制下，找出2GB文件中最大的100个数字和重复次数最多的100个字符串。
 
 [经典面试问题: Top K 之 ---- 海量数据找出现次数最多或，不重复的。](https://juejin.im/post/5aa0ee9f518825557c010bc0)
+
+
+
+
+
+
+
+
+
+
 
