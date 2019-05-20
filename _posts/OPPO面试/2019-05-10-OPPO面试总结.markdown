@@ -223,6 +223,8 @@ SessionFactory sf=entityManagerFactory.unwrap(SessionFactory.class);
 - 不会被并发访问的数据
 - 常量数据
 
+
+
 Hibernate的查询分为两类：1.得到当个对象，2.得到一个结果集
 
 单个对象：
@@ -239,14 +241,43 @@ Employee em2=session.get(Employee.Class,9);
 ```java
 Query query = session.createQuery("from Customers");
 List<Customers> list=query.list();
-Iterator<Customers> iter=query.iterator();
+Iterator<Customers> iter=query.iterate();
 ```
 
-**list()**在执行时，直接运行查询结果所需要的查询语句，而**iterator()**则是先执行得到对象ID的查询语句。然后再根据每个ID值去查询所要查询的对象。因此list()的查询通常会只执行一个SQL语句，而Iterator()的查询可能需要执行N+1条SQL语句。
+`list()`：无论有没有缓存，都会执行一条SQL语句，从数据库中获取记录
 
-list()只能使用二级缓存中的查询缓存，而无法使用二级缓存对单个对象的缓存(但是会把查询对象放入二级缓存)，所以除非重复执行相同的查询操作，否则无法利用缓存机制来提高查询效率。而且当结果集过大时，很容易造成内存溢出。
+```java
+// SELECT *FROM EMP
+List<Employee> list1 = session.createQuery("from Employee").list(); 
+for (Employee e : list1) {
+    System.out.println(e);
+}
+// SELECT *FROM EMP
+List<Employee> list2 = session.createQuery("from Employee").list();
+for (Employee e : list2) {
+    System.out.println(e);
+}
+```
 
-iterator()方法可以充分利用二级缓存，在根据ID检索对象(详细情况在下一段)的时候首先到缓存中查找，如果找不到才执行SQL语句。在执行时不会一次初始化所有对象，而是根据结果集的访问情况来初始化对象。因此在访问中可以控制缓存中对象的数量，避免内存占用过多而溢出。
+`iterate()`：执行N+1条SQL查询。第一个查询只返回所有记录的主键，并且每当迭代返回迭代器时，就执行包含WHERE子句的单独SQL查询。如果记录存在于缓存中，则执行第一个查询，不执行后面N个，直接从缓存中获取记录。
+
+```java
+// SELECT EMP_ID FROM EMP
+Iterator<Employee> iterator1 = session.createQuery("from Employee").iterate(); 
+while(iterator1.hasNext()) {
+    // SELECT * FROM EMP WHERE EMP_ID=?
+    System.out.println(iterator1.next()); 
+}
+
+// SELECT EMP_ID FROM EMP
+Iterator<Employee> iterator2 = session.createQuery("from Employee").iterate(); 
+while (iterator2.hasNext()) {
+    // From cache, no SQL
+    System.out.println(iterator2.next()); 
+}
+```
+
+
 
 Hibernate根据ID访问数据对象的时候，首先从Session一级缓存中查找；查不到，如果配置了二级缓存就从二级缓存中查。如果都查不到，在查询数据库，把结果按照ID放入到缓存删除，更新，增加数据的时候，同时更新缓存。
 
