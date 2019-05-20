@@ -4,7 +4,7 @@
 
 ##### 1.hashmap的数据结构，扩容的情况
 
-​	它的结构和HashSet是一致的，都是散列表。
+底层结构是散列表。当不同的键值产生的hashcode相同时，就会将其放在一个桶(bucket，一个横行称为一个桶)中，这也是哈希表应付冲突的办法之一 ： 拉链法
 
 <img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/13.png?raw=true">
 
@@ -12,7 +12,7 @@
 
 HashMap并不要求用户在指定HashMap容量时必须传入2的N次方整数，而是通过其他方法对传入的容量进行校正，至2的N次方倍。
 
-当HashMap的size超过Capacity*loadFactor时，需要对HashMap进行扩容。具体方法是创建一个新的，长度为原来两倍的数组，保证Capacity仍为2的N次方，同时需要通过如下transfer方法将原来的数据重新插入到新的HashMap中 (rehash过程)
+当HashMap的size超过Capacity*loadFactor时，需要对HashMap进行扩容。具体方法是创建一个新的，长度为原来两倍的数组，保证Capacity仍为2的N次方，同时需要将原来的数据重新插入到新的HashMap中 (rehash过程)
 
 
 
@@ -91,11 +91,27 @@ static final <K,V> Node<K,V> tabAt(Node<K,V> []tab,int i){
 
 [Java中sleep()与wait()](https://blog.csdn.net/u012050154/article/details/50903326)
 
-[Java与线程](https://www.imooc.com/article/257138) 该文章说是转载联系作者，但是打开原文链接却是404。
+[Java与线程](https://www.imooc.com/article/257138) 该文章说是转载联系作者，但是打开原文链接却是404。 
 
- [java线程是用户级的吗](https://www.zhihu.com/question/23096638)
+[java线程是用户级的吗](https://www.zhihu.com/question/23096638)
 
-生命周期：new，Runnable，等待，计时等待，阻塞，终止
+生命周期：new(新建)，Runnable(可运行)，Waiting(等待)，Timed Waiting(计时等待)，Blocked(阻塞)，Terminated(终止)。
+
+当用**new**操作创建一个线程时，处于**new**状态：这时，线程处于刚刚创建的状态，程序还没有开始运行线程中的代码，在线程运行之前还有一些基础工作要做。
+
+一旦调用**start**方法，线程就处于**Runnable**状态：一个可运行的线程可能在运行也可能没有运行，这取决于操作系统给线程提供的时间。
+
+当线程处于**Blocked**或者**Waiting**状态时，它暂时不活动：不允许任何代码且消耗最少资源，直到线程调度器重新激活它。如何到达这两种状态呢？
+
+- 当一个线程试图获取一个内部的对象锁(不是`java.util.concurrent`库中的锁)，而该锁被其他线程持有，则该线程进入**Blocked**状态。当本线程持有锁的时候，就是非阻塞状态
+- 当一个线程等待另一个线程通知调度器一个条件时，它进入**Waiting**状态。在调用Object.wait()或者Thread.join()方法，或者是等待 `java.util.concurrent`库中Lock或Condition时，就会处于这个状态。实际上，被阻塞与等待状态有很大不同
+- 有几个方法有一个**超时参数**，调用它们导致线程进入**Timed Waiting**状态。这个状态一直持续到超时满期或者接收到适当的通知。
+
+**只有两种情况**：因为run()方法**正常退出而自然死亡**，另一个是因为一个**没有捕获的异常**从而终止了run()方法意外死亡。
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/37.png?raw=true">
+
+
 
 sleep()：是正在执行的线程主动让出CPU，并不释放资源，过了指定时间之后继续执行。**可以在任何地方使用**
 
@@ -246,9 +262,9 @@ Hibernate根据ID访问数据对象的时候，首先从Session一级缓存中�
 
 [Java对象在JVM中的内存分配](https://www.jianshu.com/p/2f295b9f4cd4)
 
-JVM的内存结构大致如下：
+JVM的内存结构大致如下： 从一个更高的维度看JVM和系统调用之间的关系
 
-<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/17.png?raw=true">
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/19.png?raw=true">
 
 - 堆(Heap)：线程共享。所有对象实例以及数组都要在堆上分配。回收器主要管理的对象
 - 方法区(Method Area)：线程共享。存储类信息，常量，静态变量，即时编译器JIT编译的代码
@@ -270,12 +286,6 @@ JVM的内存结构大致如下：
 - -XX:MaxPermSize 设置永久代最大空间大小
 - -Xss 设置每个线程的堆栈大小
 - 老年代空间大小=堆空间大小-年轻代空间大小
-
-
-
-从一个更高的维度看JVM和系统调用之间的关系
-
-<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/19.png?raw=true">
 
 **堆**
 
@@ -346,7 +356,7 @@ public class Student {
 
 - 局部变量：在虚拟机栈中、基本类型的值直接存储在栈中，如age=10，如果是一个对象，只存储对象的引用如s=ref
 - 实例变量：存放在堆中，如Student类中的实例 name=ref
-- 静态变量：存放在方法区中的常量池中，如Student.class中的，birthday=ref
+- 静态变量：存放在方法区中，如Student.class中的，birthday=ref
 
 
 
@@ -580,7 +590,7 @@ private final HashSet<Worker> workers = new HashSet<Worker>();
 
 
 
-**线程池总结**：线程池的本质是一个HashSet，多余的任务会放在阻塞队列中。只有当阻塞队列满了之后，才会触发非核心线程的创建。所以非核心线程只是临时打杂的。还提供了两个钩子(beforeExecute,afterExecute)给我们，让我们可以在执行任务前后做一些处理。
+**线程池总结**：线程池的本质是一个HashSet，多余的任务会放在阻塞队列中。只有当阻塞队列满了之后，才会触发非核心线程的创建，而当线程池中的线程数量达到它的最大容量，而且队列也满了的话，就会执行拒绝测录。另外还提供了两个钩子(beforeExecute,afterExecute)给我们，让我们可以在执行任务前后做一些处理。
 
 它的关键技术是：锁(lock,cas)，阻塞队列，hashSet(资源池)
 
@@ -604,9 +614,22 @@ Sun公司的JVM采用的是**根搜索算法**来判定哪些对象要被回收�
 
 GC Roots包括：
 
-- 虚拟机栈中引用的对象
-- 方法区中类静态属性实体引用的对象
+- 虚拟机栈中引用的对象：如下面在方法中声明的对象，它的引用就存储在虚拟机栈中
+
+```java
+public void method(){
+    Object obj=new Object();
+}
+```
+
+- 方法区中类静态属性实体引用的对象：如下面直接在类中的static属性对象
+
+```java
+private static Object object; 
+```
+
 - 方法区中常量引用的对象
+
 - 本地方法栈中JNI引用的对象
 
 补充概念：在JDK1.2之后引入了四个引用类型：
@@ -638,7 +661,7 @@ GC Roots包括：
 
 
 
-**Full GC(也叫Major GC)是发生在老年代**的垃圾收集动作，采用**标记-清除算法**
+**Full GC(也叫Major GC)是发生在老年代**的垃圾收集动作，采用**标记-清除算法**或者**标记-整理算法**
 
 现实生活中，老年代的人通常会比新生代的人“早死”，堆内存中的老年代不同于这个现象。老年代里的对象几乎都是在Survivor区域中熬过来的，它们并不容易死掉。因此，Full GC发生的次数并不会有Minor GC那么频繁，并且一次Full GC要比进行一次Minor GC的时间要长。
 
