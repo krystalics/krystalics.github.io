@@ -1,0 +1,417 @@
+参考自《Java并发编程实践》
+
+---
+
+上一章我们认识了`synchronized`关键字能够实现原子操作，这一章我们来认识一下同步的另一面：内存可见性。我们不仅希望防止某个线程正在使用对象状态而另一个线程在同时修改该状态，还希望当一个线程修改了对象状态之后，其他线程能够看见发生的状态变化。
+
+##### 3.1可见性
+
+可见性是一种复杂的属性，因为在并发的环境下可见性的错误总是会与我们的预测相违背。通常，**我们无法确保执行读操作的线程能适时地看到其他线程写入的值**，有时甚至是不可能的事。所以，为了确保多个线程之间对内存写入操作的可见性，必须使用同步机制。
+
+如下面的代码中，在没有同步的情况下，共享变量：
+
+```java
+public class NoVisibility {
+
+  private static boolean ready;
+  private static int number;
+
+  private static class ReaderThread extends Thread {
+    public void run() {
+      while (!ready) {
+        Thread.yield();
+      }
+      System.out.println(number);
+    }
+  }
+
+  public static void main(String[]args){
+    new ReaderThread().start();
+    number=44;
+    ready=true;
+  }
+    
+}
+```
+
+虽然在主线程我们设置了共享变量的值，但是在`ReaderThread`线程中不一定能够看到共享变量的值发生了变化，所以可能陷入死循环；也可能只看到其中一个的变化，例如：只看到ready的变化却没看到之后number的值，就输出number的默认值0，这种现象被称为**重排序**(Reordering，**JVM或者CPU会将我们代码的执行顺序进行重新排列以达到性能优化的目的**，像上面的例子中**重排序将 ready=true调到number=44之前执行了**)。不过这个代码是在jdk6的环境下运行的，换到jdk8可能经过优化之后并不会出现错误，但是这里讲的是一种思路领会就行了。
+
+> ​	在没有同步的情况下，编译器，CPU以及运行时等都可能对操作的执行顺序进行一些意想不到的调整。在缺乏足够同步的多线程程序中，要想对内存操作的执行顺序进行判断，几乎无法得到正确的结论。
+
+像上述例子中，**当读线程查看ready变量时，可能会得到一个失效的值**。这就是**失效数据**。
+
+
+
+##### Volatile变量
+
+加锁的含义不仅经局限于互斥行为，还包含内存可见性。为了确保所有线程都能看到共享变量的最新值，所有执行读操作或者写操作的线程都必须在一个锁上同步。
+
+java语言还提供了一种稍弱的同步机制，即volatile变量，用来确保将变量的更新操作通知到其他线程。当变量声明为volatile类型后，编译器与运行时都会知道这个变量是共享的，因此**会把存放在高速缓存中或者寄存器的值作废去内存中获取该变量的值。因此，读取volatile变量总会返回最新写入内存的值。**
+
+**Java内存模型要求，变量的读取操作和写入操作都必须是原子操作**，但是对于非volatile类型的long和double变量(都是64位)，JVM允许将64位的读操作或写操作分成两个32位的操作。*当读取一个非volatile类型的long变量时，如果对该变量的读操作和写操作在不同的线程中执行，那么读的过程中很可能也在写，我们读的过程可能先读高32位和另一个值的低32位*。(**因为许多主流处理器架构不能有效地提供64位数值的原子操作**，顺便说一下，**大多数处理器架构读取volatile变量的开销只比非volatile变量要略高一些**。)。所以在并发程序中使用共享可变的long和double等类型的变量很明显是不安全的，除非使用volatile或者使用synchronized。
+
+但是过度依赖volatile变量提供的可见性，我们并不建议。因为它提供的可见性不如锁，而且也更难理解。如果在验证正确性时需要对可见性进行复杂的判断就不要使用volatile。下面给出一个经典的使用场景：**用作检查某个状态标记以判断是否退出循环**
+
+```java
+volatile boolean asleep;
+...
+    while(!asleep){
+        ...
+    }
+```
+
+虽然volatile变量很方便，但是也有局限性：**不能保证原子性**。当且仅当满足下列所有条件时才应该使用：
+
+- 对变量的写入操作不依赖变量的当前值，或者你能够确定只有单个线程更新变量的值
+- 该变量不会与其他状态变量一起纳入不变性条件。不变性就是几个变量之间的逻辑关系不管按照什么顺序，不管哪个线程操作后，这个关系要保持不变
+- 在访问变量时不需要加锁
+
+
+
+##### 发布与溢出
+
+发布(Publish)一个对象指的是使对象能够在当前作用域之外的代码中使用：例如，将一个指向该对象的引用保存到其他代码可以访问的地方，经典的情况就是`getter(),setter()`，或者在某个非私有方法中返回该引用，或者将引用传递到其他类的方法中。
+
+当某个不应该发布的对象被发布时，称之为逸出(Escape) 。下面一个简单的例子来发布一个对象
+
+```java
+public static Set<Secret> knownSecrets; //静态变量，可被该类的所有对象访问
+public void initialize(){
+    knownSecrets=new HashSet<>();
+}
+```
+
+我们本意是要隐藏`Secret`的，但是当发布`knownSecrets`对象时，间接的发布了`Secret`。还有其他的情况就是发布了该对象的引用，使得可以在外部修改对象。
+
+```java
+import java.util.Arrays;
+
+public class UnsafeStates {
+  private String [] states=new String[]{"AK","fd"};
+  private String state="state";
+  public String[] getStates(){
+    return states; //返回的是一个数组，可变
+//    return states.clone() 返回一个克隆，可以避免被改变
+  }
+  public String getState(){
+    return state;//字符串不可变，
+  }
+
+  public static void main(String[]args){
+    UnsafeStates states=new UnsafeStates();
+    String[] states1=states.getStates();
+    states1[0]="fd3";
+    String[] states2=states.getStates();
+    System.out.println(Arrays.toString(states2)); // fd3 fd
+
+    String s1=states.getState();
+    s1="fds";
+    String s2=states.getState(); 
+    System.out.println(s2); //state
+  }
+}
+```
+
+数组states已经逸出它的作用域，因为这个变量本应该是私有的。当发布一个对象时，该对象的非私有域中引用的所有对象也会被发布。通俗的说，一个已经发布的**对象**能够通过非私有的变量引用和方法调用**到达其他对象**，那么该对象也会被发布。
+
+最后一种情况是发布一个内部的类实例，如下列程序中，当`ThisEscape`发布`EventListener`时，也隐含的发布了`ThisEscape`本身。因为在这个内部类的实例中包含了对`ThisEscape`实例的隐含引用，它将事件监听隐含的绑定到调用它的对象上，所以`EventListener`包含了`this`引用。
+
+```java
+public class ThisEscape{
+    public ThisEscape(EventSource source){
+        source.registerListener(
+            new EventListener(){
+                public void onEvent(Event e){
+                    doSomething(e);
+                }
+            }
+        )；
+    }
+    void doSomething(Event e) {
+    }
+
+    interface EventSource {
+        void registerListener(EventListener e);
+    }
+
+    interface EventListener {
+        void onEvent(Event e);
+    }
+
+    interface Event {
+    }
+}
+```
+
+我们在构造方法中，创建了一个`EventListener`内部类(它隐含了当前对象this)并注册到监听中。因此这个对象就可能被其他线程使用，尽管它还没有初始化。
+
+##### 安全的对象构造过程
+
+在上面代码中给出了一个逸出的特殊示例，即`this`引用在构造函数中逸出。当内部`EventListener`发布时，外部的`ThisEscape`也逸出了。所以不要在构造过程中使this引用逸出。下面我们来说一下常见的this逸出情况：在构造函数中启动一个线程。当对象在其构造函数中创建一个线程时，无论是显示创建(通过将它传给构造函数)还是隐式创建(Thread或Runnable是该对象的内部类)，this引用都会被新创建的线程共享。在对象未完全构造之前，新的线程就可以看到它。所以在构造函数创建线程最好不要启动它，而在构造函数中调用一个可以改写的实例方法(既不是私有也不是final)，同样会造成this引用逸出
+
+接下来，使用一个工厂方法来避免this引用在构造过程中逸出：
+
+```java
+public class SafeListener{
+    private final EnentListener listener;
+    private SafeListener(){
+        listener=new EventListener(){
+            public void onEvent(Event e){
+                doSomething(e);
+            }
+        }
+    }
+    public static SafeListener newInstance(EventSource source){
+        SafeListener safe=new SafeListener();
+        source.registerListener(safe.listener);
+        return safe;
+    }
+}
+```
+
+具体来说，只有当构造函数返回时，this引用才应该从线程中逸出。构造函数可以将this引用保存到某个地方，只要其他线程不会在构造函数完成之前使用它。
+
+
+
+##### 线程封闭
+
+当访问共享的可变数据时，通常需要使用同步。一种避免使用同步的方式就是不共享数据。如果仅在单线程内访问数据，就不需要同步，这种技术称之为线程封闭(Thread Confinement)，它是实现线程安全最简单的方式之一。而当一个对象封闭在线程中时将自动实现线程封闭技术，即使被封闭的对象不是线程安全的。
+
+```java
+new Thread(()->{
+    //在线程内部的对象，是天然封闭的
+      HashSet<String> safe=new HashSet<>();
+    }).start();
+```
+
+像是Swing中大量运用这种技术，还有就是JDBC的Connection对象。JDBC规范并不要求Connection对象必须是线程安全的（不过：服务器提供的连接池是线程安全的，连接池通常会由多个线程同时访问，因此非线程安全的连接池是没有意义的）。Java还提供了一些机制来保证线程封闭：例如局部变量(被存储在虚拟机栈中，属于线程私有空间)还有ThreadLocal类也是线程封闭但是它是在类中的实例也实现了线程封闭和普通实例的作用。具体请看这里：[ThreadLocal详解](https://krystalics.github.io/2019/05/16/ThreadLocal/)
+
+##### Ad-hoc线程封闭，栈封闭
+
+Ad-hoc线程封闭是指，维护线程封闭性的职责完全由程序来实现。Ad-hoc的线程封闭很脆弱，因为没有任何一种语言特性，例如可见性修饰符或局部变量，能将对象封闭到目标线程上。事实上，对线程封闭对象的引用通常保存在共有变量中。由于太脆弱了，所以建议使用更强的**栈封闭(局部变量)或ThreadLocal类**
+
+当某个频繁执行的操作需要一个临时对象时，例如一个缓存区，而同时又希望避免每次执行时都重新分配该临时对象，就是用这个ThreadLocal。实际上很多框架都大量的使用了ThreadLocal，例如EJB调用期间，J2EE容器需要将一个事务上下文(Transaction Context)与某个执行的线程关联起来。通过事务上下文保存在静态的ThreadLocal对象中，可以很容易实现这个功能：当框架代码需要判断当前运行的是哪个事务时，只需要从这个ThreadLocal对象中读取事务的上下文。这种机制很方便，所以经常被开发人员滥用，它会降低耦合和可重用性所以要慎重考虑。
+
+它一般都是私有的静态类型，例子如下：JDBC连接保存到ThreadLocal对象中，**这样每个线程都会有自己的连接** 
+
+```java
+private static ThreadLocal<Connection> connectionHolder=new ThreadLocal<>(){
+    public Connection initialValue(){
+        return DriverManager.getConnection(DB_URL);
+    }
+}
+public static Connection getConnection(){
+    return connectionHolder.get();
+}
+```
+
+
+
+##### 不变性
+
+满足同步需求的另一种方法是使用不可变对象(Immutable Object)，如String就是不可变的。如果某个对象在创建之后其状态就不能修改，那么这个对象就称为不可变对象，String可以修改是因为修改的是引用，对象本身是不可变的，同样的不可变对象可以通过引用的变换来更新，即通过将一个保存新状态的实例来替换原有的不可变对象。
+
+许多开发人员都担心这个方式会带来性能问题，但是这是没有必要的。内存分配的开销比我们想象中的要小的多，并且不可变对象还可以带来其他的性能优势：减少加锁或者保护性副本的需求，降低对基于分代的垃圾回收机制的影响。
+
+不可变对象不等于将所有的域都声明为final，还有其他条件：
+
+- 对象创建之后，其状态就不能修改
+- 对象所有的域都是final
+- 对象正确的创建（并未this引用逸出）
+
+在可变对象的基础上构建不可变类
+
+```java
+@Immutable
+public final class ThreeStoges{
+    private final Set<String> stoges=new HashSet<>();
+    
+    public ThreeStoges(){
+        stoges.add("Moe");
+        stoges.add("Larry");
+        stoges.add("Curly");
+    }
+    
+    public boolean isStoged(String name){
+        return stoges.contains(name);
+    }
+}
+```
+
+**该类并未提供接口来修改它的状态，所以它一旦构造完之后是不可变的。**
+
+> 正如：除非需要更高的可见性，否则应该将所有的域都声明为私有域；除非需要某个域是可变的，否则应该将其声明为final域
+
+限制对象的可变性是一个很好的编程习惯，一个基本不可变的对象是更加容易维护的
+
+
+
+##### 使用Volatile类型来发布不可变对象
+
+在前面的文章中有提到只是用volatile是没有办法保证线程安全的，因为它没有办法保证原子性。而在某些情况下，**不可变对象能提供一种弱形式的原子性，**所以二者的结合能在一定程度上保证线程安全。还是以因式分解为例，先创建一个缓存的不可变容器类：里面的域都是final，而且一旦创建不可修改。
+
+```java
+@Immutable
+class OneValueCache {
+    private final BigInteger lastNumber;
+    private final BigInteger[] lastFactors;
+
+    public OneValueCache(BigInteger i, BigInteger[] factors) {
+        lastNumber = i;
+        lastFactors = factors;
+    }
+
+    public BigInteger[] getFactors(BigInteger i) {
+        if (lastNumber == null || !lastNumber.equals(i)) {
+            return null;
+        } else {
+            return Arrays.copyOf(lastFactors, lastFactors.length);
+        }
+    }
+}
+```
+
+然后使用指向不可变容器对象的volatile类型引用以缓存最新的结果
+
+```java
+@ThreadSafe
+public class VolatileCachedFactorizer implements Servlet{
+    private volatile OneValueCache cache=new OneValueCache(null,null);
+    
+    public void service(ServletRequest req,ServletResponse resp){
+        BigInteger i=extractFromRequest(req);
+        BigInteger[] factors=cache.getFactors(i);
+        if(factors==null){
+            factors=factor(i);
+            cache=new OneValueCache(i,factors);
+        }
+        encodeIntoResponse(resp,factors);
+    }
+}
+```
+
+因为`cache`是不可变的，并且在每条代码路径中只会访问一次，通过使用包含多个状态变量的容器对象来维持不变性条件，使用一个`volatile`类型的引用来确保可见性，使得`VolatileCachedFactorizer`在没有显示使用锁的情况下仍然是线程安全的。
+
+
+
+##### 安全发布
+
+到目前为止，我们都在讨论如何确保对象不被发布，例如让对象封闭在线程或者另一个对象内部。很多时候我们还是希望在多个线程之间共享对象，然而仅仅将该对象保存到公有域(public)是不够的。
+
+在没有足够同步的情况下发布对象（不建议）
+
+```java
+public Holder holder;
+public void initialize(){
+    holder=new Holder();
+}
+```
+
+代码看似没有任何问题，但是由于可见性问题，其他线程看到Holder对象将处于不一致的状态，即使该对象的构造函数已经正确的构建了不变性条件。**这种不正确的发布会导致其他线程看到尚未创建完成的对象**。
+
+##### 不正确的发布：正确的对象被破坏
+
+我们不能指望一个尚未被完全创建的对象拥有完整性。某个观察该对象的线程**将看到对象处于不一致的状态，然后看到对象的状态突然发生改变，即使线程在对象发布后没有修改它**。如上面的holder就是未被正确发布，除了发布对象的线程外，其他线程看到的holder是一个失效值，因此将看到一个null或者之前的旧值。然而，更糟糕的是，**线程看到holder引用的值是最新的**，**但是holder状态的值却是失效的**。诸如此类的错误很多，这就是当多个线程间共享数据时将发生一些奇怪的事，很多都是不可预测的。 
+
+##### 不可变对象与初始化安全性
+
+由于不可变对象是一种非常重要的对象，因此Java内存模型为不可变对象的共享提供了一种特殊的初始化安全性保障。从上文可知，即使某个对象的引用对其他线程是可知的，但是并不意味着对象的状态也是可见的。为了确保对象状态能呈现出一致的视图就必须使用同步。
+
+另一个方面，即使发布不可变对象的引用没有使用同步，也仍然可以安全的访问该对象。**任何线程都可以在不需要额外同步的情况下安全访问不可变对象，即使在发布这些对象时没有使用同步。**这种保证还将延伸到正确创建对象中所有final类型的域。然而，如果**final类型的域指向的是可变对象，那么访问这些与所指向的对象状态时仍然需要同步。**因为**，final修饰对象不变的是引用而不是对象的状态。**
+
+##### 安全发布的常用模式
+
+**可变对象必须通过安全的方式来发布**，这通常**意味着在发布和使用该对象的线程时都必须使用同步**。要安全的发布一个对象，对象的引用以及对象的状态必须同时对其他线程可见。一个正确构造的对象可以通过下面这些方式来安全发布：
+
+- 在静态初始化函数中初始化一个对象引用
+
+```java
+private static Object object;
+public static void initialize(){
+    object=new Object();
+}
+```
+
+- 将对象的引用保存到volatile类型的域或者AtomicReference对象中
+
+```java
+public volatile Object obj;
+public AtomicReference<Object> obj;
+```
+
+- 将对象的引用保存到某个正确构造对象的final类型域中
+
+```java
+public final Object obj;
+```
+
+- 将对象的引用保存到一个由锁保护的域中：像jdk提供的Vector或synchronizedList。jdk的其他线程安全库中的一些容器类提供页安全发布的保证。
+  - Hashtable，synchronizedMap或者ConcurrentMap中，
+  - Vector，CopyOnWriteArrayList，CopyOnWriteArraySet，synchronizedList或synchronizedSet中，
+  - BlockingQueue或者ConcurrentLinkedQueue
+
+```java
+public Vector<Object> obj;
+```
+
+通常，要发布一个**静态构造对象**，最简单和最安全的方式是使用静态的初始化器：
+
+```java
+public static Holder holder=new Holder();
+```
+
+静态初始化器由JVM在类的初始化阶段执行。由于JVM内部存在着同步机制，因此通过这种方式初始化的任何对象都可以被安全发布。
+
+
+
+##### 事实不可变对象
+
+虽然在技术上看该对象是可变的，但其状态在发布后不会再改变就称之为事实不可变对象(Effectively Immutable Object)。例如Date本身是可变的(这或许是类库设计的一个错误)，但是如果将它作为不可变对象来使用，那么在多个线程之间共享Date对象时就可以省去锁的使用。假设需要维护一个Map对象，其中保存了每位用户的最近登录时间：
+
+```java
+public Map<String,Date> lastLogin=Collections.synchronizedMap(new HashMap<>(String,Date));
+```
+
+如果Date对象的值放入Map后不发生改变，那么synchronizedMap中的同步机制就足以使Date值被安全的发布，并且在访问这些Date值时不需要额外的同步。
+
+##### 可变对象
+
+如果对象在构造后可以修改，那么安全发布只能确保发布当时状态的可见性，对于可变对象来说不仅在发布对象时需要同步，而且每次对象访问时同样需要同步来确保后续的修改操作的可见性。
+
+对象的发布需求取决于它的可见性：
+
+- 不可变对象可以通过任意机制发布
+- 事实不可变对象必须通过安全方式发布
+- 可变对象必须通过安全方式发布，并且必须是线程安全的或者有锁保护
+
+##### 安全的共享变量
+
+当获得对象的一个引用时，你需要知道在这个引用上可以执行哪些操作。在使用它之前是否需要获得一个锁？是否可以修改它的状态？许多并发错误都是不理解共享对象的既定规则导致的。当发布一个对象时，必须明确说明该对象的访问方式：在并发程序中共享对象，可以使用一些实用的策略：
+
+- 线程封闭
+- 只读共享：在没有额外的同步时，共享的只读对象可以由多个线程并发访问，但是任何线程都不能修改它。共享的只读对象包括不可变对象和事实不可变对象
+- 线程安全共享：线程安全的对象在内部实现同步，因此多个线程可以自由访问
+- 保护对象：被保护的对象只能通过持有特定的锁来访问，保护对象包括封装在其他线程安全对象中的对象，以及已发布的并且由某个特定锁保护的对象。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
