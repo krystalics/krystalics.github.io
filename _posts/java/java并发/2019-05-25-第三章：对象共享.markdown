@@ -125,7 +125,7 @@ public class ThisEscape{
                     doSomething(e);
                 }
             }
-        )；
+        );
     }
     void doSomething(Event e) {
     }

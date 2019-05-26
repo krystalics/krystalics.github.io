@@ -1,0 +1,84 @@
+本文记录《java 并发编程》中我个人比较难理解的点 
+
+---
+
+##### 竞态条件
+
+在并发编程中，这种**由于不恰当的执行时序而出现不正确的结果**是一种非常重要的情况，它的正式名称叫——竞态条件(Race Condition)。
+
+**当某个计算的正确性取决于多个线程的交替执行时序时，就会发生竞态条件**。大多数竞态条件的本质是——基于一种可能失效的观察结果来做出判断或执行某个计算。即”先检查后执行“(Check-Then-Act)。
+
+```java
+if(fileNotExist){
+    //当第一个线程来到这里的时候发现文件不存在，于是创建文件
+    createFile();
+    //而在它创建文件的过程中，另一个线程也执行这个操作，发现文件不存在，于是它也开始创建文件
+   //二者之间造成了覆盖，可能导致未预期的异常，数据消失，文件被破坏等。
+}
+```
+
+上述情况就是根据当前线程观察到的情况以及开始创建文件之间，观察结果可能变得无效。
+
+
+
+##### 不变性
+
+线程安全中的定义要求，**多个线程之间的操作无论采用何种执行时序或交替方式，都要保证不变性条件不被破坏**。那么不变性到底是什么呢？在具体例子中探讨一下：
+
+```java
+@NotThreadSafe
+public class UnsafeCachingFactorizer implements Servlet{
+    private finale AtomicReference<BigInteger> lastNumber=new AtomicReference<>();
+    private finale AtomicReference<BigInteger[]> lastFactors=new AtomicReference<>();
+    
+    public void service(ServletRequest req,ServletResponse resp){
+        BigInteger i=extractFromRequest(req);
+        if(i.equals(lastNumber.get())){
+            encodeIntoResponse(resp,lastFactors);
+        }else{
+            BigInteger[] factors=factor(i);
+            //这两个set操作都是原子的，但是我们并不能够保证同时更新lastNumber和lastFactor
+            //这也就导致了，竞态条件的出现。
+            lastNumber.set(i);
+            lastFactors.set(factors);
+            encodeIntoResponse(resp,factors);
+        }
+    }
+}
+```
+
+`UnsafeCachingFactorizer`的**不变性**条件之一是：**在lastFactors中缓存的因数之积应该等于lastNumber中缓存的数值**。只有确保这个不变性条件不被破坏，上面的Servlet才是正确的。当**不变性条件中涉及多个变量时，各个变量之间并不是彼此独立的，而是某个变量的值会对其他变量的值产生约束**。因此，**当更新某一个变量时，需要在同一个原子操作中对其他变量的值进行更新。**
+
+由此，我们可以将**不变性条件理解为：变量之间的约束关系不变，变量与外部输入数据关系不变。**
+
+
+
+[锁重入](https://krystalics.github.io/2019/05/24/%E7%AC%AC%E4%B8%80%E9%83%A8%E5%88%86-%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/#232%E9%87%8D%E5%85%A5)：当线程试图获取一个由他自己持有的锁时。
+
+发布——this[引用逸出](https://krystalics.github.io/2019/05/25/%E7%AC%AC%E4%B8%89%E7%AB%A0-%E5%AF%B9%E8%B1%A1%E5%85%B1%E4%BA%AB/#%E5%8F%91%E5%B8%83%E4%B8%8E%E6%BA%A2%E5%87%BA) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### 
