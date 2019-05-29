@@ -20,9 +20,21 @@
 
 
 
+##### 第三天：
 
+今天站立会议：昨天配置完环境，处于刚开始阶段。
 
+今天的目标是把这个模块做完，目标达到度70%：目前还差通知功能没有搞定，试了很多插件都不行。加上我手机有问题不能运行app，所以只能在模拟器上做。没有一个可以工作的：比如其中一个插件，
 
+```js
+missing exec:FCMPlugin.subscribeToTopic
+ripple.js:41 missing exec:FCMPlugin.ready
+ripple.js:48 FCMPlugin
+ripple.js:48 ready
+VM5959 FCMPlugin.js:5 FCMPlugin.js: is created
+```
+
+这个插件问题困扰了我6个小时左右，还没有解决。这大概就是我不喜欢cordova的原因了吧，有很多方便的同时也有很多限制。
 
 
 
