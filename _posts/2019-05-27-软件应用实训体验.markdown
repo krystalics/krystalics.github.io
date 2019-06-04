@@ -52,6 +52,12 @@ VM5959 FCMPlugin.js:5 FCMPlugin.js: is created
 
 
 
+##### 第六天：
+
+继续昨天的工作，原来是步士虎它手机没有给app的通知权限。所以都能够兼容。还做了界面UI的优化，采用MUI。
+
+
+
 
 
 
