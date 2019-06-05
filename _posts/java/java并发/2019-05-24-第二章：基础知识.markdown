@@ -290,6 +290,8 @@ public class Test {
 
 这就是`synchronized`内置锁，当执行同步方法时整个对象加锁，防止其他线程中对该对象访问(这里的锁住整个对象是指：对象中同步方法的访问控制)，对于没有`synchronized`修饰的方法在其他线程中即使该对象被锁住的时候也可以访问。
 
+还有个简单的判断方法可以知道synchronized是可重入锁：当一个线程执行到method1 的synchronized方法时，而在method1中会调用另外一个synchronized方法method2，此时该线程不必重新去申请锁，而是可以直接执行方法method2。
+
 
 
 ##### 2.4用锁来保护状态
