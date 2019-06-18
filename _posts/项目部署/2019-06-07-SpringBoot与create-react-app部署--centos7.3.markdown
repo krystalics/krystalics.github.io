@@ -50,11 +50,23 @@ app.get('/*', function(req, res) {
 app.listen(9000);
 ```
 
-然后服务器在app目录中运行 `node exam.js`
+然后服务器在app目录中运行 `node exam.js`，但是当我们关闭该终端项目就默认被关闭了。所以需要在后台运行，这边使用`pm2`管理项目：
+
+```js
+npm install pm2 -g
+```
+
+```
+pm2 start exam.js
+```
+
+这样用pm2启动项目之后，即使当前终端关闭了，node进程仍然在后台运行。
+
+有关于pm2的一些命令请看 [PM2快速入门](https://pm2.io/doc/zh/runtime/quick-start/)
 
 
 
-##### 后台jar项目部署：
+##### 后台jar项目部署： 
 
 ##### 首先上传项目.jar文件。
 
