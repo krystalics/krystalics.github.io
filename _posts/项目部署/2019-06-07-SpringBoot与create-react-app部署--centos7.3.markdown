@@ -4,6 +4,24 @@
 
 本来想要用时下最流行的docker，但是使用docker的方式出现各种错误，想了想还是之后有时间再慢慢学习吧。
 
+##### 首先上传项目文件。
+
+我只用了一个 pscp （windows中需要下载 cygwin）[在windows中把文件传到远程linux服务器](https://blog.csdn.net/onlyanyz/article/details/18663761)，例子如下：
+
+```
+pscp -r E:\rbooks\backend\target\backend-0.0.1-SNAPSHOT.jar  root@47.102.119.234:/home/user
+-r 表示上传文件夹中所有文件   
+E:\rbooks\frontend 是源文件夹的地址
+root是用户名
+@47.102.119.234是服务器ip地址
+:/home/user 是服务器上的文件夹地址
+之后需要输入root用户在服务器上的密码
+```
+
+文件上传之后就要开始环境配置，准备后台运行项目
+
+
+
 ##### 先来说说 create-react-app 的部署吧。
 
 参考 [Create React App部署](https://www.html.cn/create-react-app/docs/deployment/)
@@ -24,7 +42,7 @@ npm install -g serve
 
 但是我使用了`history API`路由（React Router使用 `browserHistory`），静态文件服务器将失败。例如我访问` www.rbooks.top:5000/home `的时候就直接404，包括**动态服务器**很多时候都不能够访问该路径。
 
-采用express服务技术 的 exam.js中，它的目录结构是和 build同级，所以需要创建一个新的文件夹包括build和exam.js：
+采用express服务技术 ，新建一个 exam.js，它的目录结构是和 build同级：
 
 >app
 >
@@ -34,7 +52,7 @@ npm install -g serve
 >
 >----exam.js
 
-`npm install express --save` 服务器安装 express
+`npm install express --save` 服务器安装 express，内容如下
 
 ```js
 const express = require('express');
@@ -67,22 +85,6 @@ pm2 start exam.js
 
 
 ##### 后台jar项目部署： 
-
-##### 首先上传项目.jar文件。
-
-我只用了一个 pscp （windows中需要下载 cygwin）[在windows中把文件传到远程linux服务器](https://blog.csdn.net/onlyanyz/article/details/18663761)，例子如下：
-
-```
-pscp -r E:\rbooks\backend\target\backend-0.0.1-SNAPSHOT.jar  root@47.102.119.234:/home/user
--r 表示上传文件夹中所有文件   
-E:\rbooks\frontend 是源文件夹的地址
-root是用户名
-@47.102.119.234是服务器ip地址
-:/home/user 是服务器上的文件夹地址
-之后需要输入root用户在服务器上的密码
-```
-
-将项目.jar文件上传之后，就要考率环境配置，运行项目。以我这个项目为例，后台需要
 
 ##### 安装jdk1.8
 
@@ -134,6 +136,8 @@ source /home/user/demo.sql;
 项目总算是上线了，虽然路途还远但一切都在脚下。网站正在备案，目前只能通过加端口访问 www.rbooks.top:5000/home bug很多，很多东西显示不出来，本来我都不想上传的.......
 
 
+
+大约一周之后，网站备案完成。www.rbooks.top ，bug还有很多，有问题可以提issue哟
 
 
 
