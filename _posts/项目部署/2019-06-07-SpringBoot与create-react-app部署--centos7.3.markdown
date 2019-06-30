@@ -139,7 +139,24 @@ source /home/user/demo.sql;
 
 大约一周之后，网站备案完成。www.rbooks.top ，bug还有很多，有问题可以提issue哟
 
+---
 
+2019.6.30 项目全新上线，但是紧接着遭到了滑铁卢。。。让我们来正式看下情况
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/44.png?raw=true"> 
+
+查了几篇资料，最终查到了答案（对我有效）： [Spring Boot下Mysql数据库的中文乱码问题分析](https://blog.csdn.net/blueheart20/article/details/52385142) 思路清晰
+
+在数据库中： `show variables like 'char%'` ，发现服务器中的msyql数据库的 `character_set_server=latin1` , 并不是统一的UTF-8格式。而 `set global character_set_server=utf8` 并重启mysql服务之后也并没有效果。所以直接在 /etc/my.cnf中初始化 character_set_server。。
+
+```
+vi /etc/my.cnf
+...
+在my.cnf中增加
+character_set_server=utf8
+```
+
+之后重启mysql服务：`systemctl restart mysql` 。中文变成问号的问题就解决了。
 
 
 
