@@ -141,7 +141,7 @@ source /home/user/demo.sql;
 
 ---
 
-2019.6.30 项目全新上线，但是紧接着遭到了滑铁卢。。。让我们来正式看下情况
+2019.6.30 项目全新上线，但是紧接着遭到了滑铁卢。中文变成了问号???。让我们来正式看下情况
 
 <img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/44.png?raw=true"> 
 
