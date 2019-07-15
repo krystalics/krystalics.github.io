@@ -75,4 +75,17 @@ mvn clean install -Dmaven.test.skip=true
 
 如果该方法没有被编译进JIT，那么右侧就会显示的not jit compiled。如果是inline，那么右侧就是汇编代码。
 
-之后的用法这里就不介绍了，这里只是做个介绍
+
+
+还有一个很重要的东西，要知道JIT编译器方法的优化有很多种，其中最重要的就是
+
+- 将bytecode编译成本地代码native：默认配置是方法执行超过10000次，jvm会将其编译成native。相关配置在-XX:CompileThreshold=10000 中。On Stack Replacement（OSR）：如果循环体执行的次数非常多，那么该循环体可能也会被编译为本地代码
+- 分支预测（Branch Predication）：降低分支条件判断结果的随机性，使得CPU指令流水线缓存命中率提升
+- 方法内联（inlining，对性能提升很大）：方法内联可以减少方法调用，从而减少方法栈的创建。毕竟可以减少进栈和出栈的消耗。
+  - -XX:MaxInlineSize：配置能被内联方法的最大字节数，默认值为35Byte，一般不改它（各个大牛都这样说）。像是一般pojo类的getter和setter不需要频繁调用，但是它们的字节码一般非常短，这种方法在执行后是会被内联的。
+  - -XX:FreqInlineSize：调用非常频繁的方法能被内联的最大字节数，默认值为325Byte（据说和平台有关，64位时325Byte）
+
+查看方法如下图：
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/53.png?raw=true">
+
