@@ -1,0 +1,193 @@
+Go语言核心36讲笔记——第二章，命令源码文件
+
+---
+
+在之前的文章中看到了go语言源文件有三种：命令源码文件，库源码文件，测试源码文件。
+
+如题，这篇文章的任务就是解析命令源码文件的用途以及如何编写它：
+
+> 命令源码文件时程序的运行入口，是每个可独立运行的程序必须拥有的。我们可以通过build或者install生成与其对应的可执行文件。通过install来生成的可执行文件，文件名与其父目录同名
+
+可以直白的说，如果一个源码文件声明属于main包，并且包含一个无参数的main函数，他就是命令源码文件，如下：hello.go
+
+```go
+package main
+
+import "fmt"
+
+func main(){
+    fmt.Println("hello world")
+}
+```
+
+`go run hello.go`命令就可以在屏幕的console中看到 hello world了。根据以上定义，hello.go就是一个命令源码文件，实际上一个项目中命令源码文件只能有一个。
+
+既然叫命令源码文件，也得和命令一样能接受参数吧
+
+##### 知识点：
+
+##### 1.命令源码文件怎样接收参数
+
+首先，Go语言有一个代码包专门用于接收和解析命令参数，它叫flag。听起来就很有flag的感觉，好吧 开始写代码啦
+
+```go
+package main
+
+import (
+	"flag"
+	"fmt"
+	"os"
+)
+
+var name string
+
+func init(){
+	flag.StringVar(&name,"name","everyone","The greeting object.")
+}
+
+func main(){
+	flag.Parse();
+	fmt.Printf("hello,%s\n",name)
+}
+```
+
+```go
+go run hello.go -name="robot"
+```
+
+之后就自然打印出 `hello,robot` 。
+
+解释一下flag.StringVar这个方法吧，它接受四个参数
+
+- 第一个参数是用于存储该命令参数值的地址，具体到这里就是name的地址
+- 第二个是指定该命令参数的名字，在这里就是 -name="robot"
+- 第三个是没有传参时name的值默认为 everyone
+- 第四个是对该参数的简短说明，在使用 `go run hello.go --help`查看该命令源码文件的参数说明的时候会打印出来，打印内容类似于
+
+```go
+D:\awesomeProject\src\main>go run hello.go --help
+Usage of C:\Users\12857\AppData\Local\Temp\go-build036539726\b001\exe\hello.exe:
+  -name string
+        The greeting object. (default "everyone")
+exit status 2
+```
+
+其中Usage of后面跟的是build命令源码文件时临时生成的可执行文件的完整路径。也可以先build
+
+```go
+go build hello.go
+// 生成可执行文件 hello.exe 之后
+hello --help
+```
+
+```go
+D:\awesomeProject\src\main>hello --help
+Usage of hello:
+  -name string
+        The greeting object. (default "everyone")
+```
+
+与flag.StringVar函数类似的函数还有 flag.String()。这两个函数的区别是后者会直接返回一个已经分配好的用于存储命令参数值的地址，而前一个是当做参数传进去
+
+```
+var name =flag.String("name","everyone","The greeting object.")
+```
+
+flag.Parse() 用于真正解析命令参数，并把它们的值赋给相应变量。对该函数的调用必须在所有命令参数存储载体声明和设置之后（这句话的意思在例子中就是flag.Parse()要在name以及flag.StringVar()函数之后调用）并且在读取任何命令参数值之前进行。
+
+综上，我们把flag.Parse() 放在main函数的第一行比较合适。
+
+
+
+##### 我们还可以自定义命令源码文件的参数使用说明
+
+最简单的一种方式就是对变量flag.Usage重新赋值，它的类型是func() 一种无参数声明且无结果声明的函数类型
+
+flag.Usage变量在声明时就已经被赋值了，所以我们才能够在运行命令`go run hello.go --help`时看到正确的结果。还是要注意 flag.Usage的赋值要在flag.Parse()之前
+
+```go
+flag.Usage= func() {
+    fmt.Fprintf(os.Stderr,"Usage of %s:\n","question")
+    flag.PrintDefaults()
+}
+```
+
+运行`go run hello.go --help`后，结果如下
+
+```
+D:\awesomeProject\src\main>go run hello.go --help
+Usage of question,
+  -name string
+        The greeting object. (default "everyone")
+exit status 2
+```
+
+
+
+再深入的讲，调用flag包中的一些函数(比如StringVar，Parse等)的时候，实际上是在调用flag.CommandLine变量的对应方法。flag.CommandLine相当于默认情况下的命令参数容器，通过flag.CommandLine重新赋值，可以更深层次地指定当前命令源码文件的参数使用说明。
+
+```go
+flag.CommandLine=flag.NewFlagSet("",flag.ExitOnError)
+flag.CommandLine.Usage= func() {
+    fmt.Fprintf(os.Stderr,"Usage of %s:\n","question")
+    flag.PrintDefaults()
+}
+```
+
+将之前flag.Usage的赋值注释掉换成这两句，运行结果是一样的，但是它的配置更加灵活。
+
+```go
+flag.CommandLine=flag.newFlagSet("",flag.PanicOnError)
+```
+
+flag.PanicOnError和flag.ExitOnError都是预定义在flag包中的常量。
+
+- flag.ExitOnError的含义是告诉命令参数容器，当命令后跟--help或者参数设置不正确的时候，在打印命令参数使用说明后以状态码2结束当前程序。状态码2表示用户错误的使用了命令，
+- flag.PanicOnError与上面的区别是最后抛出 运行时恐慌(panic)，Go程序错误处理方面的概念。关于它的部分，后面再说
+
+我们还可以自己创建一个变量，当做私有的命令参数容器：
+
+```go
+var cmdLine=flag.NewFlagSet("question",flag.ExitOnError)
+```
+
+然后我们把程序中的方法换掉一些
+
+```go
+flag.StringVar => cmdLine.StringVar
+flag.Parse() => cmdLine.Parse(os.Args[1:]) 
+```
+
+`os.Args[1:]`指的是我们给定的那些命令参数。这样做的好处是是更加灵活的配置参数，但是我们配置的参数不会影响到全局变量 flag.CommandLine
+
+
+
+在评论区中看到有配置两个参数的同学，遇到了一个问题：
+
+```go
+func init() {
+  flag.StringVar(&name, "name1", "ladies", "The greeting object 1")
+  flag.StringVar(&name, "name2", "gentlemen", "The greeting object 2")
+}
+```
+
+这两个参数都是赋值给name，然后传进各种参数验证。比如
+
+`go run hello.go -name2=robot -name1=jose` 
+
+按照一般的逻辑来说，结果应该是 hello robot ,结果是 hello jose 。它的执行顺序和我们方法内的执行顺序不一致。据说flag包的example中注释给出了解答
+
+> 两个flag赋值同一个变量时可以用来做命令参数缩写，由于初始化顺序未定义（这里是指传参时二者顺序未知可变），所以需要确保两者使用同一默认值，并且他们必须在init()函数中设置
+
+
+
+##### 思考题：
+
+1.默认情况下，我们可以让命令源码文件接受那些类型的参数值？
+
+string bool number等基础类型把
+
+2.我们可以把自定义的数据类型作为参数值的类型吗？怎么做呢
+
+可以，需要实现flag包里的Value接口，然后使用flag.Var()实现
+
