@@ -1,0 +1,144 @@
+第二天，第三章，ヾ(◍°∇°◍)ﾉﾞ
+
+---
+
+##### 库源码文件
+
+在之前我们就接触过它了，基本上可以理解为除了main方法之外的所有源代码都是库源码。在Go中，程序实体是变量，常量，函数，结构体和接口的统称。和其他语言一样，都是先声明(定义)实体再使用它。
+
+而程序实体的名字叫做标识符，就是标识程序中实体的东西，通俗的来说就是变量名。它的命名规则和其他语言没有什么两样，都是首字母不能是数字。
+
+##### 文章讲述的问题是：如何把命令源码文件中的代码拆分到其他库源码文件中？
+
+实际上题目的意思是如何引入其他文件和包中的方法，go在这方面有自己的一套逻辑（感觉还是Java方便），首先是main.go
+
+```go
+package main
+
+import (
+	"flag"
+)
+
+var name string
+
+func init() {
+	flag.StringVar(&name, "name", "everyone", "The greeting object.")
+}
+
+func main() {
+	flag.Parse()
+	hello(name) //注意，这里的hello方法是引入同一目录中hello.go的方法
+}
+```
+
+然后是同目录下的文件，hello.go
+
+```go
+package main
+
+import "fmt"
+
+func hello(name string) {
+	fmt.Printf("Hello, %s!\n", name)
+}
+```
+
+然后我们运行`go run main.go` ，你会发现结果并不如你想那样：
+
+```sh
+D:\awesomeProject\src\main>go run main.go
+# command-line-arguments
+.\main.go:15:2: undefined: hello
+```
+
+意思是说，在main.go的第15行代码中有个方法叫hello，它并未被定义。这怎么回事，我们不是在hello.go中定义它了吗？ 运行`go run main.go hello.go -name=world`
+
+```sh
+D:\awesomeProject\src\main>go run main.go hello.go -name=world
+hello,world
+```
+
+它竟然需要连hello.go一起加进去跑，这也太不智能了吧。即使是先build一下main目录，再运行main.exe也很麻烦呀。
+
+
+
+##### 暂时抛开我们的不满，让我们看看怎么引入其他包的代码
+
+其实在之前的笔记中我已经写出来了，在这里再特别说明一下，假设我们再创建一个lib目录，然后里面的demo.go代码如下：
+
+```go
+package lib
+
+import "fmt"
+
+func Hello(name string) {
+	fmt.Printf("Hello, %s!\n", name)
+}
+```
+
+我们在main.go中加入对lib包的引入，然后使用lib.Hello()就可以了
+
+```go
+import (
+	"lib"
+)
+//...
+lib.Hello("world")
+```
+
+
+
+好，怎么引入包和方法的问题圆满解决了，现在是不是可以顺便探讨一下访问权限的问题了、毕竟go并没有定义public，protected和private这一套。
+
+**名称的首字母为大写的程序实体(注意程序实体的概念在本节顶部有)才可以被包外代码引用，否则只能当做包内代码了(相当于java中没有修饰符的情况)** 
+
+还可以通过internal代码包对公开实体进行修饰，使其只能够被直接父包及其子包中的代码引用（是不是很像protected，不过go的粒度是包）
+
+
+
+思考题：
+
+1.如果需要导入两个代码包，而这两个包的导入路径的最后一级是相同的，比如 dep/lib/flag 和flag，会产生冲突吗？（别的我先不说，Java这种情况会产生冲突）
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/go/img/14.png?raw=true">
+
+嗯，如果包名和flag一致就冲突，如果不一致就不会。运行结果如下
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/go/img/15.png?raw=true">
+
+2.如果产生冲突，怎么解决冲突呢？有几种方式？
+
+1.改目录名，2.给包设置别名
+
+这里参考[Golang - import导入包语法](https://blog.csdn.net/zhangzhebjut/article/details/25564457)
+
+```go
+import (f "stringutil/flag")
+f.Hello("sdf")
+```
+
+除了别名设置，还有一些其他方便的操作比如
+
+- `import (. "stringutil/flag")` ：这个点表示导入这个包后，调用该包的函数时，可以省略前缀包名，也就是说可以直接使用里面的Hello方法了 `Hello("fd")` 
+- `import (_ "stringutil/flag")` ：很多时候我们并不需要引入其他包的方法，只是需要它们包中的所有init()都执行，所以有了这么一个操作符，
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

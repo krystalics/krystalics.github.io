@@ -1,6 +1,6 @@
-今天，公司实习任务（其实是我主动上报想学go），查了查网上的教程，发现还是买一个专栏省心，起码质量有保证，花了我99元呢，一定要看完。如果看完笔记，想要购买教程的同学们可以扫描下方二维码哟
+今天，公司实习任务（其实是我主动上报想学go），查了查网上的教程，发现还是买一个专栏省心，起码质量有保证，花了我99元呢，一定要看完。如果看完笔记，想要购买教程的同学们可以点击链接，扫描二维码，可以省30元哟
 
-<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/go/img/tuijian.jpg?raw=true">
+https://github.com/krystalics/krystalics.github.io/blob/master/_posts/go/img/tuijian.jpg
 
 ---
 
@@ -49,7 +49,7 @@ import "github.com/labstack/echo";
 
 go的源代码在安装之后会产生归档文件(archive) .a为拓展名的文件（这是一个静态链接库文件，存储多个源码文件内容的集合），会被自动放在工作区的pkg子目录；而可执行文件.exe会放在工作区的bin子目录。导入命令如下：
 
-```go
+```sh
 go install github.com/labstack/echo
 ```
 
@@ -76,12 +76,62 @@ build的过程：
 
 在运行`go build`命令的时候，默认不会编译目标代码包所依赖的那些代码包。如果被依赖的代码包的归档文件不存在或者源码发生了变化，还是会被编译。需要其他功能时候加个辅助参数
 
-```cmd
-go build -a //强制编译
-go build -i //不但强制编译依赖的代码包，还安装他们的归档文件
-go build -x //查看go build 命令具体执行了哪些操作，
-		 -n // 只查看执行操作而不执行它们
-		 -v //可以看到go build 命令编译的代码包的名称
+```sh
+go build -a #强制编译
+go build -i #不但强制编译依赖的代码包，还安装他们的归档文件
+go build -x #查看go build 命令具体执行了哪些操作，
+go build -n # 只查看执行操作而不执行它们
+go build -v #可以看到go build 命令编译的代码包的名称
+```
+
+关于被依赖的代码包的归档文件不存在，就是.a文件不存在，build的时候会编译该代码包。如果.a文件存在，如果像C语言的方式，hello.a这个链接库存在，编译运行的时候不会去接触源文件。但是go中会检查源文件是否发生了变化，我们可以运用上面的参数来看看 build的具体流程：
+
+```sh
+D:\awesomeProject>go build -x -v main
+# 首先它指定了个临时的工作空间
+WORK=C:\Users\12857\AppData\Local\Temp\go-build354097426
+# 然后它准备编译 main 目录下的包
+main
+# 创建一个b001文件夹和里面的引入配置文件
+mkdir -p $WORK\b001\
+cat >$WORK\b001\importcfg << 'EOF' # internal 到EOF文件结束
+# import config  引入配置，就是需要引入的依赖包，这里是各个源文件的归档文件
+packagefile flag=E:\Go\pkg\windows_amd64\flag.a
+packagefile fmt=E:\Go\pkg\windows_amd64\fmt.a
+packagefile os=E:\Go\pkg\windows_amd64\os.a
+packagefile stringutil=D:\awesomeProject\pkg\windows_amd64\stringutil.a
+packagefile runtime=E:\Go\pkg\windows_amd64\runtime.a
+EOF
+# 进入我们要编译的目录，然后调用 go安装路径下的编译器 compile.exe 
+cd D:\awesomeProject\src\main
+"E:\\Go\\pkg\\tool\\windows_amd64\\compile.exe" -o "C:\\Users\\12857\\AppData\\Local\\Temp\\go-build354097426\\b001\\_pkg_.a" 
+#...太多了，省略
+# 生成 导入的link文件
+cat >$WORK\b001\importcfg.link << 'EOF' # internal
+packagefile main=$WORK\b001\_pkg_.a
+packagefile flag=E:\Go\pkg\windows_amd64\flag.a
+packagefile fmt=E:\Go\pkg\windows_amd64\fmt.a
+packagefile os=E:\Go\pkg\windows_amd64\os.a
+packagefile stringutil=D:\awesomeProject\pkg\windows_amd64\stringutil.a
+packagefile runtime=E:\Go\pkg\windows_amd64\runtime.a
+packagefile errors=E:\Go\pkg\windows_amd64\errors.a
+packagefile io=E:\Go\pkg\windows_amd64\io.a
+packagefile reflect=E:\Go\pkg\windows_amd64\reflect.a
+packagefile sort=E:\Go\pkg\windows_amd64\sort.a
+packagefile strconv=E:\Go\pkg\windows_amd64\strconv.a
+#...还是太多了，省略
+EOF
+# 创建exe文件夹
+mkdir -p $WORK\b001\exe\
+# 进入当前目录，即执行go build命令的目录。执行以下操作
+cd .
+"E:\\Go\\pkg\\tool\\windows_amd64\\link.exe" -o "C:\\Users\\12857\\AppData\\Local\\Temp\\go-build354097426\\b001\\exe\\a.out.exe" -importcfg "C:\\Users\\12857\\App
+Data\\Local\\Temp\\go-build354097426\\b001\\importcfg.link" -buildmode=exe -buildid=40kiYswH4PCMhaXMar_8/elbKqvKBgG3T6KwpMNrh/iKC7CdCM2AbhDX371myo/40kiYswH4PCMhaXM
+ar_8 -extld=gcc "C:\\Users\\12857\\AppData\\Local\\Temp\\go-build354097426\\b001\\_pkg_.a"
+"E:\\Go\\pkg\\tool\\windows_amd64\\buildid.exe" -w "C:\\Users\\12857\\AppData\\Local\\Temp\\go-build354097426\\b001\\exe\\a.out.exe" # internal
+# 最后复制可执行文件到 main.exe中，删除之前创建的临时文件夹
+cp $WORK\b001\exe\a.out.exe main.exe
+rm -r $WORK\b001\
 ```
 
 install会先执行build，然候会进行链接(Link) 并把结果文件传进指定目录（这点和C的编译过程很像）。和上面相对应的，
@@ -117,7 +167,7 @@ install会先执行build，然候会进行链接(Link) 并把结果文件传进�
 
 
 
-好了文章大致结束了，我们来实战演练一番吧：使用Goland或者其他IDE都可
+##### 好了文章大致结束了，我们来实战演练一番吧：使用Goland或者其他IDE都可
 
 在设置了GOPATH之后，我们在对应目录下创建src,bin,pkg，如下图
 
@@ -170,9 +220,13 @@ func main() {
 // dlrow olleh
 ```
 
-最终代码结构如下：
+目录结构如下：
 
 <img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/go/img/7.png?raw=true">
+
+如果使用`go install stringutil` ，会生成一个.a文件，目录结构如下：
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/go/img/10.png?raw=true">
 
 嗯，如果还不满足，可以再写个测试，go自带一个轻量级的测试库testing。在stringutil中加入一个测试文件reverse_test.go
 
@@ -229,6 +283,40 @@ go get github.com/golang/example
 命令行会报出 `package github.com/example : No go file ...`之类的错误，它的意思是说example目录下没有go文件，但其实包已经引入了，只是没有上一步那样编译hello包而已。
 
 
+
+在网上浏览文章的时候，还看到一些很有意思的其他问题：我们知道go是按照目录名来编译的，如果该目录下有两个包，情况会怎么样。假如结构如下： [原文链接](https://blog.csdn.net/CMbug/article/details/49339341)
+
+>stringutil
+>
+>--- reverse.go   (package stringutil_2)
+>
+>--- reverse_test.go   (package stringutil)
+
+像GoLand这样的IDE会直接报错：同一个目录下存在多个包 ，
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/go/img/11.png?raw=true">
+
+如果强行install会出现如下情况：
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/go/img/12.png?raw=true">
+
+我们可以通过查看install命令的帮助来看看install需要的东西：
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/go/img/13.png?raw=true">
+
+其中 Install compiles and installs  the packages named by the import paths。大致意思就是包名和导入路径一致，而因为导入路径是按照目录来编译的，所以包名要与目录名一致。如果目录中只有一个.go文件，包名和目录名可以不一致。import的时候是目录名，然后使用的时候是包名
+
+```go
+package stringutil_2  //包名与目录名不一致
+import "stringutil"  // 导入时使用目录名
+stringutil_2.Reverse() //使用时恢复 包名
+```
+
+
+
+
+
+go get下载的包如果都在第一个工作区，那么其他工作区中怎么会有相同包路径的包，是复制过去的吗？（这里想到了一个答复，相同包路径可能是由于我们人在不同工作区手动创建了相同的路径）
 
 
 
