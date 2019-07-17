@@ -1,5 +1,7 @@
 今天，公司实习任务（其实是我主动上报想学go），查了查网上的教程，发现还是买一个专栏省心，起码质量有保证，花了我99元呢，一定要看完。如果看完笔记，想要购买教程的同学们可以扫描下方二维码哟
 
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/go/img/tuijian.jpg?raw=true">
+
 ---
 
 #### 工作区和GOPATH
