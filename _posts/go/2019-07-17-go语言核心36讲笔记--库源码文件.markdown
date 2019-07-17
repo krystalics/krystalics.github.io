@@ -92,9 +92,9 @@ lib.Hello("world")
 
 **名称的首字母为大写的程序实体(注意程序实体的概念在本节顶部有)才可以被包外代码引用，否则只能当做包内代码了(相当于java中没有修饰符的情况)** 
 
-还可以通过internal代码包对公开实体进行修饰，使其只能够被直接父包及其子包中的代码引用（是不是很像protected，不过go的粒度是包）
+还可以通过internal代码包（我们自己创建一个internal包）对公开实体进行修饰，使其只能够**被直接父包及其子包中的代码引用**（是不是很像protected，不过go的粒度是包）
 
-
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/go/img/16.png?raw=true">
 
 思考题：
 
