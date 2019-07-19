@@ -4,6 +4,8 @@
 
 [深入分析Java中的中文编码问题](https://www.ibm.com/developerworks/cn/java/j-lo-chinesecoding/)
 
+[Java Nio浅析](https://tech.meituan.com/2016/11/04/nio.html)
+
 实习的工作涉及到了文件的IO，我对这块并不是太熟悉，虽然也不要求我了解这方面的东西。但实际上很久之前，我对NIO和网络以及其他一些比较有难度的包就比较感兴趣，困于没有需求。这次NIO是在周会上说要学，当做工作来做，在这里要强推一波[帆软](http://www.fanruan.com/company) （虽然没什么流量）
 
 ---
@@ -157,9 +159,45 @@ Socket也有很多种（类比交通工具），大多数情况下我们用的�
 
 也是由于IO的种种缺陷，才催生出了NIO乃至AIO。
 
+说了那么多，来个经典的BIO的服务程序模型。了解一下，BIO在Web应用中是如何工作的，下面是伪代码，不能正常工作；
 
+```java
+ThreadPoolExecutor executor = new ThreadPoolExecutor(10, 20, 50, TimeUnit.SECONDS,new ArrayBlockingQueue<>(10)); //线程池
+ServerSocket ss=new ServerSocket();
+ss.bind(8088);
 
+while(!Thread.currentThread.isInturrpted()){//直到新连接到来一直循环
+    Socket socket=ss.accept();
+    executor.submit(new ConnectIOonHandle(socket));//为新连接创建新线程
+}
 
+class ConnectIOonHandle extends Thread{
+    private Socket socket;
+    public ConnectIOonHandle(Socket socket){
+        this.socket=socket;
+    }
+    public void run(){
+        while(!Thread.currentThread.isInturrpted()&&socket.isClosed()){
+            String something=socket.read(); //读取数据
+            if(){
+                //...
+            }
+        }
+    }
+}
+```
+
+BIO一般会有线程池为每一个新来的连接创建一个新的线程，但是线程吃的是内存资源，如果线程过多机器就会宕机，过少就没有意义。所以缺陷比较大，需要平衡。适合并发数量小的情况。一般1000连接以下。
+
+BIO模型中，需要多线程是因为I/O操作的时候，没有办法知道到底能不能写，能不能读，只能在哪里等待。除非整个系统就一个连接，否则新的连接来了，不创建线程还能怎么办。
+
+##### 最后再附上常见I/O模型对比：
+
+所有的I/O都分为两个阶段：等待和就绪，例子：read()，分为等待系统可读和真正的读；write()也是等待网卡可以写以及真正的写。
+
+等待就绪的阻塞时不使用CPU的，是在空等；真正读写的阻塞是使用CPU的，这个过程很快（因为CPU就很快）属于memory copy，带宽通常在1GB/s以上。
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/java/img/11.png?raw=true">
 
 
 
