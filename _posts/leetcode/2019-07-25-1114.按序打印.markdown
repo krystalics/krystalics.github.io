@@ -1,0 +1,117 @@
+我们提供了一个类：
+```java
+public class Foo {
+  public void one() { print("one"); }
+  public void two() { print("two"); }
+  public void three() { print("three"); }
+}
+```
+三个不同的线程将会共用一个 Foo 实例。
+
+线程 A 将会调用 one() 方法
+线程 B 将会调用 two() 方法
+线程 C 将会调用 three() 方法
+请设计修改程序，以确保 two() 方法在 one() 方法之后被执行，three() 方法在 two() 方法之后被执行。
+三个线程的调度顺序是不定的。
+来源：力扣（LeetCode） 链接：https://leetcode-cn.com/problems/print-in-order
+我自己的解决方法是这样的
+```java
+
+class Foo {
+
+  private volatile boolean isFirstPrint = false;
+  private volatile boolean isSecondPrint = false;
+
+  public Foo() {}
+
+  public void first(Runnable printFirst) throws InterruptedException {
+
+    // printFirst.run() outputs "first". Do not change or remove this line.
+
+    printFirst.run();
+
+    isFirstPrint = true;
+  }
+
+  public void second(Runnable printSecond) throws InterruptedException {
+
+    // printSecond.run() outputs "second". Do not change or remove this line.
+    while (true) {
+      if (isFirstPrint) {
+
+        printSecond.run();
+        isSecondPrint = true;
+        break;
+      }
+    }
+  }
+
+  public void third(Runnable printThird) throws InterruptedException {
+
+    // printThird.run() outputs "third". Do not change or remove this line.
+    while (true) {
+      if (isSecondPrint) {
+        printThird.run();
+        break;
+      }
+    }
+  }
+}
+```
+
+执行用时 :24 ms, 在所有 Java 提交中击败了24.07%的用户
+内存消耗 :35.5 MB, 在所有 Java 提交中击败了100.00%的用户
+看其他用户的提交是这样的。利用 CountDownLatch的门栓特性，很符合语义的解决了问题。我是利用 `volatile`的**可见性**，判断它之前的有没有打印。
+其他用户使用这个方法的时候，好像更简便：
+```java
+while(!first){}
+printSecond.run();
+second=true;
+```
+```java
+import java.util.concurrent.CountDownLatch;
+
+class Foo {
+    private CountDownLatch second = new CountDownLatch(1);
+    private CountDownLatch third = new CountDownLatch(1);
+    public Foo() {
+
+    }
+
+    public void first(Runnable printFirst) throws InterruptedException {
+
+        // printFirst.run() outputs "first". Do not change or remove this line.
+        printFirst.run();
+        second.countDown();
+    }
+
+    public void second(Runnable printSecond) throws InterruptedException {
+
+        second.await();
+        // printSecond.run() outputs "second". Do not change or remove this line.
+        printSecond.run();
+        third.countDown();
+    }
+
+    public void third(Runnable printThird) throws InterruptedException {
+
+        third.await();
+        // printThird.run() outputs "third". Do not change or remove this line.
+        printThird.run();
+    }
+}
+```
+还有用信号量机制的，以及看了看用C和Python写的。
+
+
+
+
+
+
+
+
+
+
+
+
+

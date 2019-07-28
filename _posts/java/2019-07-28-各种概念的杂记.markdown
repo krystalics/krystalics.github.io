@@ -1,0 +1,101 @@
+[Function的用法](<http://orchome.com/935>)
+
+JDK 1.8中包含了很多内建的函数式接口，这些接口都使用了 `@FunctionalInterface`注解。
+
+```java
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface FunctionalInterface {}
+```
+
+这个注解意味着该接口是函数式接口，只能有一个自定义的方法。也可以从object类继承而来的方法，虽然编译器会自动把只有一个方法的接口视为函数式接口，使用这个注解也算是显示声明了吧。静态方法和默认方法不算抽象方法： static , default
+
+```java
+@FunctionalInterface
+public interface Function<T,R> {
+    R apply(T t);
+    default <V> Function<T, V> andThen(Function<? super R, ? extends V> after) {
+        Objects.requireNonNull(after);
+        return (T t) -> after.apply(apply(t));
+    }
+    static String test(){
+        return "test";
+    }
+}
+
+```
+
+如果该类中声明了两个抽象方法就会报错 `Invalid @FunctionInterface annotation; ...`，java 8常用的函数式接口如下：
+
+| 接口名    | 类型           | 描述                            |
+| --------- | -------------- | ------------------------------- |
+| Consumer  | Consumer< T >  | 接收T对象，不返回值             |
+| Predicate | Predicate< T > | 接收T对象并返回boolean          |
+| Function  | Function<T,R>  | 接收T对象，返回R对象            |
+| Supplier  | Supplier< T >  | 提供T对象（例如工厂），不接收值 |
+
+
+
+##### Instrument
+
+Java Instrumentation 指的是可以用独立于应用程序之外的代理(agent)程序来监测和协助运行在JVM上的引用程序。通过 Java的 Instrumentation接口来实现
+
+> Instrumentation is the addition of byte-codes to methods for the purpose of gathering data to be utilized by tools.
+
+Instrumentation接口是向方法添加字节代码，用于收集数据而使用的工具
+
+
+
+##### ThreadGroup
+
+为了方便管理线程而出现，现在因为stop()，suspend()方法的不安全性导致在被废弃的边缘。它可以统一设定一组线程的属性，安全策略等。
+
+线程组和线程池是两个不同的概念，后者是为了管理线程的生命周期，复用线程，减少创建销毁线程的开销。
+
+
+
+##### AQS  
+
+AbstractQueuedSynchronizer 队列同步器，它是构建锁或者其他同步组件的基础框架（如ReentrantLock，ReentrantReadWriteLock，Semaphore等） 它是Java.util.concurrent包的核心基础组件
+
+AQS解决了实现同步器时涉及的大量细节问题，例如获取同步状态，FIFO同步队列。基于AQS来构建同步器中只能有一个时刻发生阻塞，从而降低上下文切换的开销，提高了吞吐量。AQS的主要使用方式是继承，使用int类型的成员变量state来表示同步状态
+
+当state>0时表示已经获得了锁，state=0表示释放锁，它提供了三个方法(getState()，setState(int newState)，compareAndSetState(int expact,int update)) 来对同步状态state进行操作，当然AQS可以确保对state的操作是线程安全的
+
+通过内置的FIFO同步队列来完成资源获取线程的排队工作，如果当前线程获得同步状态（锁）失败时，AQS则会将当前线程以及等待状态等信息构造成一个节点，并将其加入同步队列，同时会阻塞当前线程，当同步状态释放时，则会把节点中的线程唤醒，使其再次尝试获取同步状态。
+
+
+
+##### ReentrantLock的介绍
+
+ReentrantLock重入锁，是实现Lock接口的一个类，也是在实际编程中使用频率很高的一个锁，支持重入性，表示对共享资源能够重复加锁，即当前线程获取该锁再次获取不会被阻塞。像synchronize隐式支持重入，通过synchronize通过获取自增，释放自减的方式实现重入。ReentrantLock还支持公平锁和非公平锁两种方式。
+
+公平锁就是先到先得，锁的获取顺序符合请求的时间顺序。构造时传入true为公平锁，false时为非公平锁。它默认是非公平锁，因为公平锁需要保证时间上的绝对顺序，频繁的上下文切换，性能开销增大。
+
+
+
+##### CompleteableFuture 
+
+Java 5并发库主要关注于异步任务的处理，它采用了 producer线程创建任务并且利用阻塞队列将其传递给任务的consumer，这种线程模型在Java 7和8中进一步发展，并且开始支持另一种风格的任务执行方式
+
+将任务的数据集分为子集，每个子集都可以独立且同质的子任务来负责处理。这种风格的基础库也就是fork/join框架，它允许程序员规定数据集该如何划分，并且支持将子任务提交到默认的线程池中，也就是通用的ForkJoinPool。
+
+java 8中 fork/join并行功能借助并行流的机制变得更加具有可用性。但是不是所有任务都适合这种并行处理； 它所处理的元素必须是相互独立的，数据集足够大，并且在并行加速方面，每个元素的处理成本要足够高，这样才能补偿建立fork/join框架所消耗的成本。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

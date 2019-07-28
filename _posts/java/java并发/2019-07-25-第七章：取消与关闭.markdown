@@ -1,0 +1,364 @@
+很惭愧，再次看这本书是两个月之后了。生活和学习就是这样，永远有别的事情要做。永远有更多想看的书。这次是因为实习中遇到了一个任务，需要了解并发的取消与关闭机制，所以才重新捧起这本书。希望可以找到灵感，原谅我跳章了，本来还想从头到尾把这本书看一遍的。顺便说一句到企业实习的感想：原来企业里面真的是开口闭口都是并发，都是几千万的数据量，分布式，集群之类的话题，原谅我low了，只能乖乖在金字塔下面挖坑把自己埋了。
+
+---
+
+#### 第七章：取消与关闭
+
+任务和线程的启动相对容易。在大多数的时候，我们都会让他们自行运行到结束。然而，有些时候希望任务提前结束，线程能够中止：就像我实习的任务一样：当内存被释放了，线程还继续的要往下读（由于线程调度顺序问题，虽然有检查，但是没什么软用），这个时候我们当然希望读线程赶紧停下来了，而且是立刻停止。
+
+要使它们能够安全，快速，可靠地停止，并不是一件容易的事情。Java没有提供任何机制来安全总之线程（Thread.stop() 和 suspend()有严重缺陷）。转而提供了一种 中断机制 ，很像操作系统的中断，就是中断对象不同。它能够使一个线程终止另外一个线程当前的工作。
+
+在文章中还提到，很少希望某个任务，线程或者服务立即停止，因为这种**立即停止会使得共享的数据结构处于不一致的状态**：就像4个人一起建房子，其中负责打地基的人干到一半突然被叫走了，其他人并不知道就一直干活。到最后得到的是一个地基不完整的房子。我们往往希望它，能把地基打完再走。
+
+在程序中对应的体现为，当需要停止的时候他们首先会清除当前正在执行的工作，然后再结束（这一句就让我这知道了，想要通过中断来完成这个任务是不可能的了）。还是刚才的场景，被叫走的那个人实际上是因为家里着火了，总不能要求他还先把地基打完再走嘛！所以我觉得这种中断机制就应该加一个优先级的概念，如果中断的优先级很高，就立即停止工作不就好了嘛？
+
+但是不管怎么样，这书看都看了，总不能半途而废吧。说不定后面会有些灵感呢！
+
+##### 任务取消
+
+如果**外部代码**能够在某个**操作正常完成之前**（就是没完成）将其**置入"完成"状态**，那么这个操作就可以称为 **可取消的 Cancellable**。刚看到第一句，就想到了一点（能不能将读数据的那个方法改成可取消的操作，好像问题就迎刃而解了），继续往下看
+
+- **用户请求取消**：用户点击图形界面中的取消按钮，或者通过管理接口来发出取消请求。例如JMX（Java Management Extensions）
+- **有时间限制的操作**：例如，某个应用需要在有限时间内搜索问题空间，并在这个时间内选择最佳的解决方案。当计时器超过时，需要取消所有正在搜索的任务
+- **程序中的事件**：例如，程序对某个问题空间进行分解并搜索，从而使得不同的任务可以搜索问题空间中的不同区域。当其中一个任务找到了解决方案时，所有其他仍在搜索的任务都将被取消
+- **错误**：爬虫搜索相关页面，并将页面或摘要数据保存到硬盘。当一个爬虫任务发生错误时（例如磁盘空间已满），那么所有的搜索任务都会取消，此时可能会记录它们之前的状态，以便稍后重新启动
+- **关闭**：当一个程序或服务关闭时，必须对正在处理和等待处理的工作执行某种操作。使得它平缓的关闭，也有立即关闭的情况，当前执行的任务只能取消
+
+因为Java没有提供安全的抢占式方法来停止线程，只有一些协作式（比如中断）使请求取消任务和代码遵循一种协商好的协议。在文章中举的例子就是任务中应用的例子，设置某个 “已请求取消” cancellation Request 标志。任务定期的查看该标志，如果该标志为true，则结束该任务。文章中的代码如下：
+
+```java
+
+public class PrimeGenerator implements Runnable{
+  private final List<BigInteger> primes = new ArrayList<BigInteger>();
+  private volatile boolean cancelled;
+
+  public void run() {
+    BigInteger p = BigInteger.ONE; // p=1
+    while (!cancelled) {
+      p = p.nextProbablePrime(); // 下一个素数
+      synchronized (this) {
+        primes.add(p);
+      }
+    }
+  }
+
+  public void cancel() {
+    cancelled = true;
+  }
+
+  public synchronized List<BigInteger> get() {
+    return new ArrayList<BigInteger>(primes); // 返回一个拷贝，不暴露引用
+  }
+}
+
+public class Main {
+    List<BigInteger> aSecondPrimes() throws InterruptedException{
+        PrimeGenerator generator=new PrimeGenerator();
+        new Thread(generator).start(); //在其他线程开始跑 Generator 线程，主线程sleep 1s 之后再将获取素数的方法取消
+        try{
+            Thread.sleep(1000);
+        }finally{
+            generator.cancel();
+        }
+        return generator.get();
+    }
+
+  public static void main(String[] args) throws InterruptedException{
+    //
+      Main main=new Main();
+    System.out.println(Arrays.toString(main.aSecondPrimes().toArray()));
+
+  }
+}
+```
+
+上述代码是让Generator线程运行1s之后取消执行生成素数，然而并不会刚好1s的，因为在请求取消的时刻和run方法中循环执行下一次检查之间可能存在延迟。（和业务场景基本一致），cancel方法由finally块调用，从而确保即使在调用sleep时主线程被中断也能取消 素数生成器的执行。
+
+上面的代码就是典型的可取消的任务，一个可取消的任务必须拥有取消策略（Cancellation Policy），在这个策略中将详细地定义取消操作的 How ，When 以及 What。
+
+- How：其他代码如何取消该任务，上述例子中通过，Generator自己提供的cancel方法
+- When：何时取消
+- What：响应取消时应该做些什么
+
+考虑到现实世界中停止支付的例子，银行通常都会规定如何提交一个停止支付的请求，在处理这些请求时需要作出哪些响应性保证，以及当支付中断后需要遵守哪些流程。PrimeGenerator使用里一种简单的取消策略：客户代码通过cancel来请求取消，并在每次搜索素数的时候首先检查cancelled ，如果存在则退出。
+
+嗯，第一种机制解决不了我的问题；只能眼巴巴的看下去啦；
+
+##### 中断
+
+PrimeGenerator 中的取消机制最终会使得搜索素数的任务退出，但是在退出过程中需要花费一定的时间。然而如果使用这种方法的任务调用了一个阻塞的方法，例如 BlockingQueue.put，那么可能会有更严重的问题——任务永远不会检查取消标记，因此任务永远不结束
+
+下面的代码中展示了这种可能：生产者线程生产素数，并将它们放在一个阻塞队列中，如果生产者的生产速度超过消费者的消费速度，队列将被填满，put方法会陷入阻塞（因为队列被填满了）。因为生产速度太快，消费者消费不了，所以想要叫停。通过调用 cancel() 方法设置cancelled标志，但是此时的生产者却没有时间去检查它，因为它被阻塞在put方法中了，因为消费者已经叫停了，也就是说消费者不会再从队列中取货物了，队列一直是满的，put自然放不上去，就阻塞在那里了。
+
+```java
+public class BrokenPrimeProducer extends Thread {
+    private final BlockingDeque<BigInteger> queue;
+    private volatile boolean cancelled = false;
+
+    public BrokenPrimeProducer(BlockingDeque<BigInteger> queue) {
+        this.queue = queue;
+    }
+
+    public void run() {
+        try {
+            BigInteger p = BigInteger.ONE;
+          //  while (!cancelled) { 中断可以弥补代码阻塞的缺陷
+            while (!Thread.currentThread().isInterrupted()) {
+                p = p.nextProbablePrime();
+                queue.put(p);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void cancel() {
+        cancelled = true;
+    }
+}
+```
+
+一些特殊的阻塞方法支持中断，线程的中断是一种协作机制，线程可以通过这种机制来通知另一个线程，告诉它在合适的条件下停止当前工作，并转而执行其他工作。这个线程的中断状态将被设置为true，在Thread中包含了中断线程以及查询线程中断状态的方法，
+
+```java
+public class Thread{ 
+	public void interrupt(){} // 中断目标线程
+    public boolean isInterrupted(){} //返回目标线程的中断状态
+    public static boolean interrupted(){} //清除当前线程的中断状态，并返回它之前的值
+}
+```
+
+如Thread.sleep() 和 Object.wait() 等，都会检查线程何时中断，并且在发现中断时提前返回。它们在响应中断时执行的操作包括：清除中断状态，抛出InterruptedException，表示阻塞操作由于中断而提前结束。JVM并不能保证阻塞方法检测到中断的速度，但在实际情况中响应速度非常快。
+
+当线程在非阻塞状态下中断时，它的中断状态将被设置。然后根据将被取消的操作来检查中断状态以判断发生了中断，那么中断状态将一直保持，直到明确地清除状态。
+
+**还是要注意，调用interrupt并不是说目标线程立即停止工作，而是发出了中断请求，等待目标线程检查中断状态的时候，在合适的实际中断自己**所以中断的时机也被叫做 取消点 
+
+事实证明，自定义的取消机制与可阻塞的库函数并不能良好的交互。如果任务代码能够响应中断，那么可以使用中断作为取消机制。 **通常：中断是实现取消的最合理方式**
+
+像上面的例子，我们可以使用中断来取消ConsumerPrime。每次迭代，有两个位置可以检测出众怒单：put的时候，以及一开始的显示检测。显示检查，中断响应更高效。
+
+看到这里，想到了如果读数据的方法增加一个检查中断的机制可以吗？但是由于是多线程的读，每个线程都要检查一遍吗？还是业务中的取消机制有点用，
+
+##### **中断策略**
+
+如同取消策略，最合理的中断策略是某种形式的线程级取消操作或服务级取消操作：尽快推出，在必要时进行清理，通知某个所有者该线程已经推出。还可以暂停服务，或重新开始服务。区分线程和任务对中断的反应是很重要的。一个中断请求可以有一个或多个接受者——中断线程池中的某个工作者线程，同时意味着取消当前任务和关闭工作者线程。
+
+这也是大多数可阻塞库函数都只是抛出InterruptedException作为中断响应。它们永远不会在自己的线程中运行，因此它们为任务或库代码实现了最合理的取消策略：**尽快退出执行流程。并把中断信息传递给调用者**，**从而使调用栈中的上层代码可以采取进一步的操作**
+
+当检查到中断请求的时候，任务并不需要放弃所有的操作——它可以推迟处理中断请求，并直到某个合适的时刻中断。因此需要记住中断请求，并在完成任务后抛出InterruptedException或者表示已经收到中断请求。这项技术能够确保在更新过程中发生中断时，数据结构不会遭到破坏。
+
+当我们在写代码的时候，某一个功能模块不应该依赖于线程的中断策略，因为我们可能并不知道它的策略是什么（可能是另一个同事写的），除非该任务被专门设计为 在服务中运行。并且这些服务都包含特定的中断策略。无论任务把中断视为取消，还是其他某个中断响应操作哦，都要保存好执行线程的中断状态。
+
+线程，只能由它的所有者进行中断！所有者可以将线程的中断策略信息封装在某个取消机制中，如shutdown方法。 **由于每个线程拥有各自的中断策略，除非知道该中断对线程意味着什么，否则就别碰它**
+
+##### **响应中断**
+
+当调用可以中断的阻塞函数时，例如Thread.sleep()（看到这个方法，突然想起在我的任务中可不可以在资源释放前 先将读线程暂停一段时间，可是暂停过后还是该干嘛干嘛呀，没用）。或者BlockingQueue.put等，有两种实用策略可用于处理InterruptedException
+
+- 传递异常：可能在执行某个特定任务的清除操作之后，从而使得你的方法也可成为可中断的阻塞方法。
+- 恢复中断状态：从而使调用栈中的上层代码能够对其进行处理
+
+传递InterruptedException 代码很简单：就是 throws InterruptedException ，这样就将它传递给调用它的方法
+
+```java
+public Task getNextTask() throws InterruptedException{
+    //...
+}
+```
+
+##### 计时运行
+
+下列代码在一段时间后运行中断线程的interrupt(); 这是一种非常简单的方法，但却破坏了以下规则：在中断线程之前要先了解它的中断策略。由于timedRun可以从任意一个线程调用，因此它无法知道该线程是哪个中断策略。
+
+如果任务在超时之前完成，那么**中断timedRun所在线程**的**取消任务**将在**timedRun返回到调用者之后启动**。这句话有点难理解，
+
+```java
+private static final ScheduleExecutorService cancelExec=...;
+public static void timedRun(Runnable r,long timeout,TimeUnit unit){
+    final Thread taskThread=Thread.currentThread();
+    cancelExec.schedule(new Runnable(){
+        public void run(){
+            taskThread.interrupt();
+        }
+    },timeout,unit);
+    r.run();
+}
+```
+
+如果任务不响应中断，那么timedRun会在任务结束时才返回。此时可能已经超过了指定时限（或者还没有超过时限）。如果某个限时运行的服务没有在指定时间内返回，那么将对调用者带来负面影响。	
+
+##### 通过Future来实现
+
+创建线程的2种方式，一种是直接继承Thread，另外一种就是实现Runnable接口。这2种方式都有一个缺陷就是：在执行完任务之后无法获取执行结果如果需要获取执行结果，就必须通过共享变量或者使用线程通信的方式来达到效果，这样使用起来就比较麻烦。而自从Java 5开始，就提供了Callable和Future，通过它们可以在任务执行完毕之后得到任务执行结果。
+
+我们已经使用了一种抽象机制来管理任务的生命周期，处理异常，以及实现取消——Future。下面我们将使用它来构建上面讲的timedRun。
+
+`Executors.submit()`将返回一个Future来描述任务。
+
+```java
+// @param <V> The result type returned by this Future's {@code get} method
+public interface Future<V>{ 
+    /* 返回结果表示取消操作是否成功，只是表示任务都否接受中断，并不是检测并处理中断
+       mayInterruptIfRunning=true时并且任务当前正在某个线程中运行，那么这个线程能被中断
+       为false，那么意味着若任务还没启动，就不要运行它。这种方式应该用于哪些不处理中断的任务中
+    */
+    boolean cancel(boolean mayInterruptIfRunning);
+    
+    boolean isCancelled();
+    boolean isDone();
+    V get() throws InterruptedException, ExecutionException;
+    V get(long timeout, TimeUnit unit)
+        throws InterruptedException, ExecutionException, TimeoutException;
+}
+```
+
+按照上文的策略：不要随意中断一个线程，那么我们什么时候可以在调用cancel方法时传进一个true？如果执行任务的线程是由标准的Executor创建的，它实现了一种中断策略使得任务可以被中断，被取消。所以如果任务在标准Executor中运行，并通过他们的Future来取消任务，那么就可以传进true。
+
+当我们尝试取消某个任务时，不宜直接中断线程池，只能通过Future来实现取消。**记住这很重要，通过任务的Future来取消它们**
+
+新版本的timedRun，将任务交个一个ExecutorService，并通过一个定时的Future.get()来获得结果。如果get在返回时抛出了一个TimeoutException，那么任务将通过它的Future来取消（为了简便，下面的代码中在finally中直接调用Future.cancel，因为取消一个已完成的任务不会带来影响）。 
+
+如果任务在被取消之前就抛出一个异常，那么该异常被重新抛出以便由调用者来处理异常。记住**，取消哪些不再需要结果的任务**可以算作性能优化把
+
+```java
+public static void timedRun(Runnable r,long timeout,TimeUnit unit)throws InterruptedException{
+    Future<?> task=taskExec.submit(r); //Executors
+    try{
+        task.get(timeout,unit);// 尝试获得任务的结果
+    }catch(TimeoutException e){
+        //接下来任务将被取消
+    }catch(ExecutionException e){
+        //如果任务中抛出了一次，那么重新抛出该异常
+        throw launderThrowable(e.getCause());
+    }finally{
+        task.cancel(true); //如果任务已经结束，取消也没影响。如果正在运行，就会被中断
+    }
+}
+```
+
+总结就是：**当Future.get()抛出InterruptedException或TimeoutException时，如果你已经知道不再需要结果，就可以cancel()他们了**
+
+##### 处理不可中断的阻塞
+
+许多可阻塞的方法都是通过**提前返回或者抛出InterruptedException**来响应中断请求的，从而使开发人员能够更容易构建出能响应取消请求的任务。然而，并非所有的可阻塞方法或阻塞机制都能响应中断；如果一个线程由于执行同步的Socket I/O或者等待获得内置锁而阻塞，那么中断请求只能设置线程的中断状态，除此之外没有其他手段来停止这些线程，但这要求我们必须知道线程阻塞的原因。  简单的说就是上面的情况，中断不了，虽然状态设置了，但是没有响应。
+
+同步**Socket I/O**：在服务器应用程序中，最常见的阻塞的I/O形式就是套接字的读取和写入（虽然，现在大的系统都采用非阻塞的方式）。在InputStream和OutputStream的read，write都不会响应中断。想让它响应中断，只有关闭底层的套接字，可以使得由于执行read,write等方法而被阻塞的线程（IO是由IO设备在做，阻塞的情况，线程只会等待IO完成）抛出一个SocketException
+
+**同步I/O**：当中断一个正在 InterruptibleChannel 上等待的线程时，将抛出 ClosedByInterruptException并关闭链路（这还会使得其他在这条链路上等待的线程也抛出该异常）。当关闭一个InterruptibleChannel 时，导致所有在链路上阻塞的线程都抛出 AsyncronousCloseException。大多数标准的Channel都实现了InterruptibleChannel 。
+
+**Selector 的非阻塞I/O**：如果一个线程在调用Selector.select()方法时阻塞了，那么调用close或wakeup方法抛出ClosedSelectorException并提前返回。
+
+**获得某个锁**：如果一个线程由于等待某个内置锁而阻塞，那么将无法响应中断（上文中说过）。因为线程傻逼的以为它能够获得锁，所以不理会中断请求。针对这种情况，Lock类提供了lockInterruptibly方法，它允许在等待一个锁的同时仍能够响应中断。
+
+下面的例子中，ReaderThread 管理了一个套接字连接，它采用同步方式从该套接字中读取数据，并将收到的数据传到processBuffer中。为了结束某个用户的连接或关闭服务器，ReaderThread改写了interrupt方法，使其既能处理标准中断，又能关闭底层的套接字。
+
+```java
+public class ReaderThread extends Thread {
+    private final Socket socket;
+    private final InputStream in;
+
+    public ReaderThread(Socket socket) throws IOException {
+        this.socket = socket;
+        this.in = socket.getInputStream();
+    }
+
+    @Override
+    public void run() {
+        try {
+            byte[] buf = new byte[1024];
+            int count = 0;
+            while ((count = in.read(buf)) < 0) {
+                processBuffer(buf,count); //这个方法具体没写，就是将数据放到缓存中
+            }
+
+        } catch (IOException e) {
+        }
+    }
+
+    @Override
+    public void interrupt() {
+        try {
+            socket.close();
+        } catch (IOException ignored) {
+
+        } finally {
+            super.interrupt();
+        }
+
+    }
+}
+```
+
+
+
+##### 采用newTaskFor来封装非标准的取消
+
+如标题，采用newTaskFor来优化上面对interrupt的封装非标准取消技术。这是java6中ThreadPoolExecutor中新增的功能。当把一个Callable提交给ExecutorService时，submit方法会返回一个Future，我们可以通过Future来取消任务。newTaskFor是一个工厂方法，它将创建Future来代表任务。newTaskFor还能返回一个RunnableFuture接口，改接口拓展了Runnable和Future
+
+通过定制表示任务的Future可以改变Future.cancel()的行为。例如，定制的取消代码可以实现日志记录或收集取消操作的统计信息，以及取消一些不响应中断的操作。通过改写interrupt方法，ReaderThread可以取消基于套接字的线程。同样通过改写任务的Future，cancel也可以实现类似功能。
+
+```java
+public class CancellingExecutor extends ThreadPoolExecutor {
+    
+    public interface CancellableTask<T> extends Callable<T>{
+        void cancel();
+        RunnableFuture<T> newTask();
+    }
+    
+    public CancellingExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue) {
+        super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue);
+    }
+    
+    protected <T> RunnableFuture<T> newTaskFor (Callable<T> callable){
+        if(callable instanceof CancellableTask)
+            return ((CancellableTask<T>) callable).newTask();
+        return super.newTaskFor(callable);
+    }
+    
+    public abstract class SocketUsingTask<T> implements CancellableTask<T>{
+        private Socket socket;
+        protected synchronized void setSocket(Socket s){this.socket=s;}
+        
+        public synchronized void cancel(){
+            try{
+                if(socket!=null){
+                    socket.close();
+                }
+            }catch (IOException e){
+                
+            }
+        }
+        // 下面对 cancel进行封装，既执行关闭socket，又cancel掉任务
+        public RunnableFuture<T> newTask(){
+            return new FutureTask<T>(this){
+                public boolean cancel(boolean mayInterruptIfRunning){
+                    try{
+                        SocketUsingTask.this.cancel();
+                    }finally {
+                        return super.cancel(mayInterruptIfRunning);
+                    }
+                }
+            };
+        }
+    }
+    
+}
+```
+
+SocketUsingTask实现了CancellableTask，并定义了Future.cancel来关闭套接字和调用super.cancel()。如果SocketUsingTask通过自己的Future来取消，那么底层的套接字将被关闭，并且线程将被中断。因此它提高了任务对取消操作的响应性：不仅能够在调用可中断方法的同时确保响应取消操作，而且还能调用可阻塞的套接字I/O方法。 
+
+##### 停止基于线程的服务
+
+应用程序通常会创建拥有多个线程的服务，例如线程池，并且这些服务的生命周期通常比创建它们的方法要更长。如果应用程序准备退出，那么这些服务所有的线程也需要结束。
+
+上文中说了很多遍的：除非你拥有某个线程，否则别碰它。这里拥有的意思就是，创建线程的地方。假如A对象创建了一个线程，那么A就是线程拥有者。类比到线程池，就可以知道线程池是工作者线程的所有者，如果要中断这些线程，就要从线程池下手。像ExecutorService中提供了shutdown和shutdownNow方法来终止线程池。
+
+**对于持有线程的服务，只要服务的存在时间大于创建线程的方法所在的存在时间，那么就应该提供生命周期方法。**
+
+后续等待更新
+
+
+
+
+
