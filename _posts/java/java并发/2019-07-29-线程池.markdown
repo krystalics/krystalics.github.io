@@ -1,0 +1,445 @@
+参考《Java核心技术——卷1》
+
+---
+
+##### Executors
+
+构建一个新的线程有一定代价的，因为它涉及到与操作系统的交互（内核线程与用户线程的映射?）。如果程序中创建了大量的生命周期很短的线程，就应该使用线程池技术。一个线程池包含许多准备运行的空闲线程，将Runnable对象交给线程池，就会有一个线程调用run()方法。当run方法退出时，线程不会死亡而是准备执行下一个run方法
+
+上面是官方的说法，实际上线程池就是实现了线程的复用以及线程生命周期管理，来减少并发数。创建大量线程会使得性能大大降低乃至虚拟机崩溃。
+
+执行器Executor 有许多静态工厂方法来构建线程池。比如下表
+
+| 方法                            | 描述                                                    |
+| ------------------------------- | ------------------------------------------------------- |
+| newCachedThreadPool             | 必要时创建新线程，空闲线程保留60s                       |
+| newFixedThreadPool              | 该池包含固定数量的线程；空闲线程会一直被保留            |
+| newSingleThreadExecutor         | 只有一个线程的池，该线程顺序执行每个提交的任务          |
+| newScheduleThreadPool           | 用于预定执行而构建的固定线程池，用于替代java.util.Timer |
+| newSingleThreadScheduleExecutor | 用于预定执行而构建的单线程池                            |
+
+都是返回实现了 ExecutorService接口的ThreadPoolExecutor类的对象
+
+可用下面三个方法将任务提交给ExecutorService，都是返回一个 Future对象
+
+```java
+Future<?> submit(Runnable task); //这个的get()方法会简单的返回null
+Future<T> submit(Runnable task,T result); //get()方法会返回指定的对象
+Future<T> submit(Callable<T> task); //将计算结果准备好的时候 得到它
+```
+
+关闭线程池使用 shutdown() 。被关闭的线程池不会接收新的任务，当所有任务都执行完毕之后 线程池死亡。 而shutdownNow()则是尝试停止正在执行的任务，并取消尚未开始的任务。
+
+总之使用线程吃的时候应该做的步骤如下：
+
+- 调用 Executors类中的静态方法 newCachedThreadPool 或 newFixedThreadPool
+- 调用submit提交Runnable或Callable对象
+- 如果想取消一个任务，或者提交Callable对象，就要保存好 submit 返回的Future对象
+- 当不再提交任务时就关闭线程池 shutdown
+
+下面从一个例子来看线程池和Future与Callable的应用：查找一个文件夹下所有的文件中包含某个关键字的数量，
+
+```java
+public class ThreadPoolTest {
+    public static void main(String[] args) {
+        try (Scanner in = new Scanner(System.in)) {
+            System.out.println("Enter base directory (e.g. /usr/local/jdk5.0/src):");
+            String directory = in.nextLine();
+            System.out.println("Enter keyword (e.g. volatile):");
+            String keyword = in.nextLine();
+
+            ExecutorService pool = Executors.newCachedThreadPool();
+
+            MathCounter counter = new MathCounter(new File(directory), keyword, pool);
+            Future<Integer> result = pool.submit(counter);
+
+            try {
+                System.out.println(result.get() + " matching files.");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
+            pool.shutdown();
+
+            int largestPoolSize = ((ThreadPoolExecutor) pool).getLargestPoolSize();
+            System.out.println("largest pool size=" + largestPoolSize);
+        }
+    }
+}
+
+class MathCounter implements Callable<Integer> {
+    private File directory;
+    private String keyword;
+    private ExecutorService pool;
+
+    private int count;
+
+    public MathCounter(File directory, String keyword, ExecutorService pool) {
+        this.directory = directory;
+        this.keyword = keyword;
+        this.pool = pool;
+    }
+
+    @Override
+    public Integer call() throws Exception {
+        count = 0;
+        try {
+            File[] files = directory.listFiles();
+            List<Future<Integer>> results = new ArrayList<>();
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    MathCounter counter = new MathCounter(file, keyword, pool);
+                    Future<Integer> result = pool.submit(counter);
+                    results.add(result);
+                } else {
+                    if (search(file)) count++;
+                }
+            }
+
+            for (Future<Integer> result : results) {
+                try {
+                    count += result.get();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return count;
+    }
+
+    public boolean search(File file) {
+        try {
+            try (Scanner in = new Scanner(file, "UTF-8")) {
+                boolean found = false;
+                while (!found && in.hasNextLine()) {
+                    String line = in.nextLine();
+                    if (line.contains(keyword)) found = true;
+                }
+                return found;
+            }
+        } catch (IOException e) {
+            return false;
+        }
+    }
+}
+```
+
+我将jdk的部分源码解压到桌面的src文件夹中，keyword=volatile 最终结果如下：
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/java/img/16.png?raw=true">
+
+提交一个Callable对象，一般都是new一个它的子类，这个子类由我们自己写。然后将任务提交到线程池中，而submit方法会返回一个Future对象，通过Future.get() 我们可以获得结果。
+
+想要更细粒度的控制任务组，可以使用 invokeAny() ：提交所有对象到一个Callable对象集合中（即所有任务集合）并返回一个已经完成了的任务的结果，具体是哪个任务就不能确定了。如果你需要的是只要一个任务完成就ok，可以选择这个方法。而invokeAll() 则是返回所有的结果
+
+```java
+List <Callable<T>> tasks=...;
+List <Future<T>> results=executor.invokeAll(tasks);
+for(Future<T> result:results){
+    processFuture(result.get());
+}
+```
+
+invokeAll() 的缺点是如果第一个任务恰巧花去很多时间，则可能不得不进行等待。将结果按可获得顺序保存起来更符合实际。可以用 ExecutorCompletionService来进行排列。
+
+先获得一个执行器，然后构建一个ExecutorCompletionService，提交任务给 完成服务(completion service) 。该服务管理Future对象的阻塞队列，其中包含已经提交的任务的执行结果（当这些结果已经返回时）。
+
+```java
+ExecutorCompletionService<T> service=new ExecutorCompletionService<>(executor);
+for(Callable<T>task :tasks){
+    service.submit(task);
+}
+for(int i=0;i<tasks.size();i++){
+    processFuture(service.take().get());
+}
+```
+
+
+
+##### Fork-Join 框架
+
+ 有些应用使用了大量的线程，但是其中大多数是空闲的。比如Web服务器可能会为每个连接分别使用一个线程。另外一些应用可能对每个处理器内核分别使用一个线程，来完成计算密集型任务，如图像或者视频处理。Java SE 7中引入 Fork-Join框架，专门用来支持后一类应用。假设有个处理任务，可以很自然的分为子任务；
+
+```java
+if(problemSize<threshold){
+    sole problem directly
+}else{
+    break problem into subproblems
+    recursively solve each subproblem 
+    combine the results ;
+    就像是算法中的分治法
+}
+```
+
+图像处理就是这么一个过程。要增强一个图像，可以变换上半部分和下半部分。如果有足够多的空闲处理器，这些操作就可以并行处理。在这里，讨论一个更简单的例子：假设统计一个数组中有多少个元素满足某个特定的属性，可以将数组一分为二，分别对这两个部分进行统计，再将结果相加。
+
+要采用框架可用的一种方式完成这种递归计算，需要提供一个 RecursiveTask< T > 的类（如果计算结果类型为T）或者提供一个扩展RecursiveAction的类（不生成任何结果）。再覆盖compute方法来生成并调用子任务，然后合并其结果
+
+```java
+class Counter extends RecursiveTask<Integer>{
+    //...
+    protected Integer compute(){
+        if(to-from<THRESHOLD){
+            solve problem directly
+        }else{
+            int mid=(from+to)/2;
+            Counter first=new Counter(values,from,mid,filter);
+            Counter second=new Counter(values,mid,to,filter);
+            invokeAll(first,second);
+            return first.join()+second.join();
+        }
+    }
+}
+```
+
+在上述伪代码中，invokeAll方法接收很多任务并阻塞，直到所有这些任务都已经完成。join方法生成结果，对每个子任务应用join并返回其总和。
+
+在后台，fork-join框架使用了一种有效的智能方法来平衡可用线程的工作负载，这种方法称为工作取密(work stealing) 。每个工作线程都有一个双端队列(queue)来完成任务。一个工作线程将子任务压入其双端队列首部，只有一个线程可以访问首部，所以不加锁。当一个线程空闲时，会从尾部获取一个任务，由于大的子任务都在队尾，所有这种密取任务很少见
+
+```java
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RecursiveTask;
+import java.util.function.DoublePredicate;
+
+public class ForkJoinTest {
+    public static void main(String[] args) {
+        final int SIZE = 1000000;
+        double[] numbers = new double[SIZE];
+        for (int i = 0; i < SIZE; i++) {
+            numbers[i] = Math.random();
+        }
+        // 最后一个是过滤器 DoublePredicate 
+        Counter counter = new Counter(numbers, 0, numbers.length, x -> x > 0.5);
+        ForkJoinPool pool = new ForkJoinPool();
+        pool.invoke(counter);
+        System.out.println(counter.join());
+    }
+}
+
+class Counter extends RecursiveTask<Integer> {
+
+    public static final int THRESHOLD = 1000;
+    private double[] values;
+    private int from;
+    private int to;
+    private DoublePredicate filter;
+
+    public Counter(double[] values, int from, int to, DoublePredicate filter) {
+        this.values=values;
+        this.from=from;
+        this.to=to;
+        this.filter=filter;
+    }
+
+    @Override
+    protected Integer compute() {
+        if(to-from<THRESHOLD){
+            int count=0;
+            for (int i = from; i < to; i++) {
+                if(filter.test(values[i])){
+                    count++;
+                }
+            }
+            return count;
+        }else {
+            int mid=(from+to)/2;
+            Counter first=new Counter(values,from,mid,filter);
+            Counter second=new Counter(values,mid,to,filter);
+            invokeAll(first,second);
+            return first.join()+second.join();
+        }
+        
+    }
+}
+
+```
+
+
+
+##### 可完成Future
+
+处理非阻塞调用的传统方法是使用事件处理器，为任务完成之后的动作注册一个处理器。如果下一个动作也是异步的，在它之后的下一个动作会在不同的事件处理器中。这就像并发一样，调度顺序并不由我们掌控，所以为了让任务按照步骤顺序完成，可能要增加错误处理。
+
+Java SE 8的CompletableFuture类提供了一种候选方法，与事件处理器不同——可完成Future与 它们的组合 composed
+
+书上的例子是这样的：
+
+```java
+// 从Web页面抽取所有链接来建立一个网络爬虫。 假设方法如下
+pulbic CompletableFuture<String> readPage(URL url);
+//Web页面可用时会生成这个页面的文本 假设方法如下
+public static List<URL> getLinks(String page);
+//生成一个HTML页面的URL，可以调度当页面可用时再调用这个方法
+CompletableFuture<String> contents=readPage(url);
+CompletableFuture<List<URL>> links=contents.thenApply(Parser::getLingks);
+```
+
+thenApply() 方法不会阻塞，它会返回另一个future，第一个future完成的时候其结果会传给getLinks()，这个方法的返回值就是最终结果。这是一种有顺序的调用方式，如果是同步的没什么好说的，如果要做到非阻塞的异步那么使用事件处理器会比较麻烦，而调用Java 8的 CompletableFuture就比较简单，就像同步一样去写它就好了。
+
+利用可完成future，可以很简单的制定非阻塞方法的执行顺序，这些方法并不是立即发生的，但很重要的一点是代码都是在一块的，方便后期管理和修改。
+
+从概念上来说，CompletableFuture是一个简单的API，不过可以有很多种方式来组合 future。下面是它的一些方法：
+
+| 方法         | 参数                                                | 描述                           |
+| ------------ | --------------------------------------------------- | ------------------------------ |
+| thenApply    | Function<? super T,? extends U>                     | 对结果应用一个方法             |
+| thenCompose  | Function<? super T, ? extends CompletionStage< U >> | 对结果应用一个方法并返回future |
+| handle       | (T,Throwable)->U  （Function的简写）                | 处理结果或错误                 |
+| thenAccept   | T->void                                             | 类似于thenApply，结果为void    |
+| whenComplete | (T,Throwable)->void                                 | 类似于handle 不过结果为void    |
+| thenRun      | Runnable                                            | 执行Runnable，结果为void       |
+
+```java
+CompletableFuture<U> future.thenApply(f);
+CompletableFuture<U> future.thenApplyAsync(f); //再另一个线程运行f方法
+```
+
+thenCompose方法的参数是T->CompletableFuture< U > ，这看起来有点抽象，举个例子：
+
+考虑给一个特定的URL中读取web页面的动作
+
+```java
+public String blockingReadPage(URL url);
+// 更巧妙的做法是返回一个future
+public CompletableFuture<String> readPage(URL url);
+```
+
+假设，我们还有一个方法可以从用户输入来得到URL，而在用户点击OK按钮之前我们都不会得到URL，这也是一个将来的事件
+
+```java
+public CompletableFuture<URL> getURLInput(String propmt);
+```
+
+例子中有两个事件，我们可以将它们组合起来，让它们按照我们想要的顺序执行，这就要thenCompose()。下面来看看多个future组合的方法
+
+| 方法           | 参数                                | 描述                               |
+| -------------- | ----------------------------------- | ---------------------------------- |
+| thenCombine    | CompletableFuture< U >,(T,U)-> V    | 执行两个动作，并用给定函数组合结果 |
+| thenAcceptBoth | CompletableFuture< U >,(T,U)-> void | 与上面类似，结果为void             |
+| runAfterBoth   | CompletableFuture< ? >，Runnable    | 两个都完成后执行Runnable           |
+| applyToEither  | CompletableFuture< T >,T->V         | 得到其中一个结果然后传给指定的函数 |
+| acceptEither   | CompletableFuture< T >,T-void       | 与上面类似，结果为void             |
+| runAfterEither | CompletableFuture< ? >，Runnable    | 其中一个完成后执行Runnable         |
+
+
+
+##### 同步器
+
+JUC包里面包含了几个能帮助人们管理相互合作的线程集的类。这些机制具有为线程之间的共用集结点模式(common rendezvous patterns) 提供的预置功能(canned functionality) 。如果有一个相互合作的线程集满足这些行为模式之一，那么应该直接重用合适的库，而不是手动撕一个。 
+
+| 类               | 作用                                                         | 说明                                                         |
+| ---------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| CyclicBarrier    | 允许线程集等待直至其中预定数目的线程达到一个公共栅栏(barrier 屏障) ，然后可以选择执行一个处理栅栏的动作 | 当大量的线程需要在他们的结果可用之前完成时                   |
+| Phaser           | 类似于循环栅栏，不过有一个可变的计数                         |                                                              |
+| CountDownLatch   | 允许线程集等待直到计数器减为0                                | 当一个或多个线程需要等待直到指定数目的事件发生               |
+| Exchanger        | 允许两个线程在要交换的对象准备好时交换对象                   | 当两个线程工作在同一数据结构的两个实例上的时候，一个向实例添加数据而另一个从实例清除数据 |
+| Semaphore        | 允许线程集等待直到被允许继续运行                             | 限制访问资源的线程总数，如果许可是1，常常阻塞线程知道另一个线程给出许可位置 |
+| SynchronousQueue | 允许一个线程把对象交给另一个线程                             | 在没有显示同步的情况下，当两个线程准备好将一个对象从一个线程传递到另一个时 |
+
+##### 信号量 Semaphore
+
+概念上来讲，一个信号量管理许多的许可证（permit）。为了通过信号量，线程通过调用acquire请求许可。其实没有实际的许可对象，信号量仅维护一个计数。许可数目是固定的，由此限制了通过的线程数量。其他线程可以通过调用release释放许可。而且许可不是必须由获取它的线程释放。事实上，任何线程都可以释放任意数目的许可，这可能会增加许可数目以至于超出初始数目。
+
+##### 倒计时门栓 CountdownLatch
+
+一个CountDownLatch 让一个线程集等待直到计数变为0。CountDownLatchshi 一次性的，一旦计数为0，就不能再重用了。举例来说，假定一个线程集需要一些初始的数据来完成工作。工作器被启动并在门外等候，另一个线程准备数据，当数据准备好的时候启动CountDownLatch，所有工作器线程就可以继续运行啦。
+
+##### 栅栏 CyclicBarrier
+
+类的内部实现了一个集结点（rendezvous）我们称之为 栅栏 (barrier)。考虑大量线程运行在一次计算的不同部分的情形。当所有部分都准备好了，需要把结构组合到一起。当一个线程完成了它的那部分任务后，它就会在集结点等待，一旦所有线程都到了，就撤销栅栏（好像CountDownLatch）但是CyclicBarrier是可以循环使用的，当线程都离开了之后它又会其作用，CountDownLatch只能使用一次
+
+```java
+public class CyclicBarrierTest implements Runnable{
+//  AfterBarrier是一个实现了 Runnable的类，定义线程离开栅栏之后的动作
+    CyclicBarrier barrier=new CyclicBarrier(10,new AfterBarrier()); //假设10个线程参与
+
+    @Override
+    public void run() {
+        System.out.println(Thread.currentThread()+" i'm work");
+        try {
+            //当每个线程的工作完成之后，就会阻塞。其中有个超时设定，超过这个时间，线程会离开栅栏，破坏这个结构，
+            //其他等待的线程就会一起离开
+            barrier.await(100, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        for (int i = 0; i < 10; i++) {
+            Thread t=new Thread(new CyclicBarrierTest());
+            t.start();
+        }
+
+    }
+}
+
+public class AfterBarrier implements Runnable {
+    @Override
+    public void run() {
+        System.out.println(Thread.currentThread() + "i leave the barrier");
+    }
+}
+```
+
+**Phaser类更加灵活，允许改变不同阶段中参与的线程数。**
+
+##### 交换器 Exchanger
+
+当两个线程在同一个数据缓冲区的两个实例上工作时（这里是指每个对象都有自己的缓冲区），就可以使用交换器(Exchanger)，典型情况就是，一个线程像缓冲区填入数据，另一个线程消耗这些数据。当它们都完成以后相互交换缓冲区
+
+##### 同步队列 SynchronousQueue
+
+同步队列是一种将生产者与消费者线程配对的机制，当一个线程调用SynchronousQueue的put方法时，它会阻塞直到另一个线程调用take()方法为止。数据仅从生产者到消费者
+
+即使SynchronousQueue实现了BlockingQueue接口，概念上来说，它依然不是一个队列。没有包含人任何元素，size为0
+
+```java
+public static void main(String[] args) throws InterruptedException {
+    final SynchronousQueue<Integer> queue=new SynchronousQueue<>();
+
+    Thread thr1=new Thread(new Runnable() {
+        @Override
+        public void run() {
+            try {
+                queue.put(1);
+                System.out.println(" 通知已被接受");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    });
+    
+    Thread thr2=new Thread(new Runnable() {
+        @Override
+        public void run() {
+            try {
+                int e=queue.take();
+                System.out.println("收到通知为"+e);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+        }
+    });
+
+    thr1.start();
+    thr2.start();
+}
+```
+
+
+
+
+
+
+
+
+
+
+
