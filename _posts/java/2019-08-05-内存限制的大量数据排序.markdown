@@ -1,0 +1,347 @@
+在面试中经常会遇到一个问题，就是内存有限的时候怎么将磁盘中的文件排序，这也是编程珠玑中的开篇问题，这里给出两种方式的Java代码和解析。
+
+参考 [Java面试中常用的BitMap代码](https://www.jianshu.com/p/9e7f8f33a61a)
+
+​	[Bitmap 算法解释与应用](https://juejin.im/entry/575be9c86be3ff0069527d24) 
+
+​	《编程珠玑·第二版》
+
+---
+
+#### 假设场景是1M的内存限制，排序20M的int不重复数据。
+
+- 注意是不重复，很多时候数据都是重复的，这里不重复只是简化了问题
+
+第一种思路是：归并的思想
+
+- 首先将20M文件分为20个小文件
+- 然后分别进行小文件的排序
+- 然后创建一个大小为20的数组，每个指针都是对应下标的文件指针(Java中的IO只有RandomAccessFile有指针)
+- 比较20个文件指针下的数据看谁最小，将最小的写入新文件并将文件指针后移
+- 重复上一步骤直到所有文件指针都到了末尾
+
+这种思路需要用到20个工作文件。代码如下
+
+```java
+public class FileSortByMerge {
+    private final int SIZE = 1024 * 1024 * 5;
+    private String dir = "D:\\data2\\intio";
+    RandomAccessFile[] fiss = new RandomAccessFile[20]; //20个读文件的流
+    {
+        for (int i = 0; i < 20; i++) {
+            try {
+                fiss[i] = new RandomAccessFile(new File(dir + "\\" + (i + 1)), "rw");
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    public void writeSource() throws IOException {
+        String fileName = dir + "\\source.txt";
+        RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
+        int[] source = new int[SIZE]; //用于存储0~size的数，用random获得位置，然后将该值与结尾最后的数交换位置
+        for (int i = 0; i < SIZE; i++) {
+            source[i] = i;
+        }
+        int size = SIZE - 1; //对应数组中的位置
+        int temp;
+        for (int i = 0; i < SIZE; i++) {
+            int pos = new Random().nextInt(size);
+            raf.writeInt(source[pos]); //获得随机位置的值之后  positive
+
+            // 交换两个位置的值
+            temp = source[pos];
+            source[pos] = source[size];
+            source[size] = temp;
+
+            size--; // 缩小范围，因为最后一个数我们已经获得过了
+            if (size < 0) {
+                break;
+            }
+        }
+
+        raf.close();
+    }
+
+    /*
+     * 先将20M的文件分成20个排好序的1M小文件
+     * */
+    public void split() throws IOException {
+        RandomAccessFile raf = new RandomAccessFile(new File(dir + "\\source.txt"), "rw");
+        int count = (1024 * 1024) >> 2; //1M int的数据
+        int[] sort = new int[1024 * 1024 >> 2];
+        for (int i = 0; i < 20; i++) {
+            for (int j = 0; j < count; j++) {
+                sort[j] = raf.readInt();
+            }
+            Arrays.sort(sort); //排序之后再写入
+            for (int j = 0; j < sort.length; j++) {
+                fiss[i].writeInt(sort[j]);
+            }
+        }
+        raf.close();
+    }
+
+    public int getMinIndex(int[] data) {
+        int min = data[0];
+        int index = 0;
+        for (int i = 0; i < data.length; i++) {
+            if (data[i] < min) {
+                min = data[i];
+                index = i;
+            }
+        }
+        return index;
+    }
+
+    public void initData(int[] data) throws IOException {
+        for (int i = 0; i < 20; i++) {
+            data[i] = fiss[i].readInt();
+        }
+    }
+
+    public void sort() throws IOException {
+        int[] data = new int[20];
+        RandomAccessFile raf = new RandomAccessFile(new File(dir + "//result.txt"), "rw");
+
+        for (int i = 0; i < 20; i++) {
+            fiss[i].seek(0); //先将20个文件的指针置为0
+        }
+
+        int index = 0;
+        int SIZE_20M = 1024 * 1024 * 5; //20M int数据的size
+        initData(data); //先读各个文件的第一个数据，填进data
+
+        for (int j = 20; j < SIZE_20M; j++) {
+            index = getMinIndex(data); //获得最小的值的对应位置,这个位置也对应着第几个文件
+            raf.writeInt(data[index]);
+            if (fiss[index].getFilePointer() < fiss[index].length()) {
+                data[index] = fiss[index].readInt(); //从对应最小的文件中读取数据到data中，再次进行对比
+            } else {
+                data[index] = Integer.MAX_VALUE; //将文件对应的值置为最大值，表示文件结束
+            }
+        }
+        raf.close();
+
+    }
+
+    public void test() throws IOException {
+        String fileName = "D:/data2/intio/result.txt";
+        RandomAccessFile file = new RandomAccessFile(fileName, "r");
+        for (int i = 0; i < SIZE; i++) {
+            if (file.length() > file.getFilePointer() && i != file.readInt()) {
+                System.out.println("wrong ");
+            }
+        }
+    }
+
+
+    public static void main(String[] args) throws IOException {
+        FileSortByMerge sort = new FileSortByMerge();
+        sort.writeSource();
+        sort.split();
+        sort.sort();
+        sort.test();
+        for (int i = 0; i < 20; i++) {
+            sort.fiss[i].close();
+        }
+    }
+
+}
+
+```
+
+
+
+另一种思路是：
+
+根据这是一个不重复的整数的特点，用bitmap记录文件中的每一个数字对应的位为true，然后遍历这个bitmap将它其中为true的位的对应位置写入另一个文件
+
+```java
+public class FileSortByBit {
+    public static void main(String[] args) throws IOException {
+        String readFile = "D:/data2/intio/source.txt";
+        String writeFile = "D:/data2/intio/target.txt";
+        RandomAccessFile read = new RandomAccessFile(readFile, "r");
+        RandomAccessFile write = new RandomAccessFile(writeFile, "w");
+
+        BitSet bitSet = new BitSet(1024 * 1024 * 5);
+        int size = (int) read.length() >> 2;
+        for (int i = 0; i < size; i++) {
+            bitSet.set(read.readInt(), true);
+        }
+        for (int i = 0; i < bitSet.length(); i++) {
+            if(bitSet.get(i)){
+                write.writeInt(i);
+            }
+        }
+//        System.out.println(bitSet);
+
+    }
+}
+
+```
+
+无论是编写效率还是运行速度都是使用BitSet完胜。但是要注意BitSet位图只适用于这种稠密的数值分布情况，如果是稀疏的情况就会造成内存浪费，比如只有两个数 [1,10000000] 就要初始化10000000大小的BitSet。
+
+##### 还有就是如果内存限制更加严重了该咋办呢？==》缩小BitSet的长度，然后进行两趟读取
+
+```java
+BitSet bitSet = new BitSet(1024 * 1024 * 5 >> 1);
+int size = (int) read.length() >> 2;
+for (int i = 0; i < size; i++) {
+    int value=read.readInt();
+    if(value<bitSet.length())  //先将小于该size的读进bitSet
+    	bitSet.set(value, true);
+}
+for (int i = 0; i < bitSet.length(); i++) {
+    if(bitSet.get(i)){
+        write.writeInt(i);
+    }
+}
+//第二趟 读取
+for (int i = 0; i < size; i++) {
+    int value=read.readInt();
+    if(value>bitSet.length())  //第二趟专门读取大于bitset.length的数
+    	bitSet.set(value-bitSet.length(), true);
+}
+for (int i = 0; i < bitSet.length(); i++) {
+    if(bitSet.get(i)){
+        write.writeInt(i+bitSet.length()); //将之前的补回来
+    }
+}
+
+```
+
+当数据量变大或者内存又变小时，我们就可以采用这种方式的变种：分为多趟读取 ，一般分为 2K次，K为整数。
+
+##### 如果每个整数的出现次数可能有10次，乃至10几万次呢？
+
+如果是10次，这个时候可以使用4位bit来表示一个数出现的次数，就是在运算的时候有点麻烦，因为位运算没有加法：过程会非常麻烦，而且它的拓展性并不好，不能兼容后面的10万次的情况。所以一般采用map的方式统计重复次数，但是使用Map的话就达不到内存的限制要求。
+
+所以我们的做法是同时使用这两个数据结构，先用bitset记录，如果遇到重复的就把该位置以及出现次数加1放到map中，写的时候就先检查bitset有没有，如果有的话再检查map中有没有重复的
+
+```java
+// 读
+for (int i = 0; i < size; i++) {
+    int value=read.readInt();
+    if(bitSet.get(value)){
+        map.put(value,map.get(value)++);
+    }else{
+        bitSet.set(value,true);
+    }
+}
+//写
+for (int i = 0; i < bitSet.length(); i++) {
+    if(bitSet.get(i)){
+        if(map.contains(i)){
+            for(int j=0;j<map.get(i);j++){
+       			write.writeInt(j);
+            }
+        }else{
+        	write.writeInt(i);  	
+        }
+    }
+}
+```
+
+内存不够的话就缩小bitSet的size，多读几次，同上面的情况类似。
+
+##### 自己写一个BitMap吧
+
+```java
+// 看着示例代码自己滚过一遍
+public class MyBitMap {
+    private long length; //申请中bit的长度
+    private static int[] bitsMap; //java.util.BitSet是以 long来实现的，这里是int
+
+    public MyBitMap(long length) {
+        this.length = length;
+        /* bitsMap的长度，首先将初始化的长度左移5位，其实就是除以32，用来表示该长度有多少个 int 。
+         * length&31 这个与运算其实就是对  31取模，除以32后可能不是整除，余下的数还需要再开一个 int
+         * 由余数 来确定
+         */
+        bitsMap = new int[(int) (length >> 5) + ((length & 31) > 0 ? 1 : 0)];
+    }
+
+    // 获得对应位的值
+    public int getBit(long index) {
+        int intData = bitsMap[(int) ((index - 1) >> 5)]; //这里减一是以1为开始计数而如果是以0位开始，就可以不用减1
+        int offset = (int) ((index - 1) & 31); //这里的偏移量就是 该int数据中的第几位
+        return (intData >> offset) & 0x01; //先将数据左移offset，这样该位就在第1位，与1，如果该位是0就返回0，如果是1则返回1
+    }
+
+    public void setBit(long index) {
+        int belowIndex = (int) ((index - 1) >> 5);
+        int offset = (int) ((index - 1) & 31);
+        int intData = bitsMap[belowIndex];
+        // 1向左移动偏移量然后和原本的数据相或，可以将第offset位 的值 置为1
+        bitsMap[belowIndex] = intData | (0x01 << offset);
+    }
+
+
+
+    public static void main(String[] args) {
+        MyBitMap bitMap=new MyBitMap(32);
+        bitMap.setBit(32);
+        for (int i = 1; i <= bitMap.length; i++) {
+            System.out.println(bitMap.getBit(i));
+        }
+//        System.out.println(bitMap.getBit(32));
+    }
+}
+```
+
+只要明白一个位时如何设置值和获得值的，就没有什么难度。
+
+下面看一下去重的案例：
+
+```java
+package filesort;
+
+import java.lang.reflect.Array;
+import java.util.Arrays;
+
+/*
+ * 自己写个bitmap去重，是以byte为基础的
+ * */
+public class BitMapRepRemove {
+    public static byte[] flags;
+
+    public static void setFlags(int num) {
+        int offset = num & 0x07;
+        flags[num >> 3] |= 0x01 << offset;
+    }
+
+    public static int getFlags(int num) {
+        int offset = num & 0x07;
+        return (flags[num >> 3] >> offset) & 0x01;
+    }
+
+    public static void main(String[] args) {
+        int[] array = {255, 1024, 1024, 0, 65534, 0, 1024, 8888, 9999, 1111, 8888};
+        int length = 65535 + 1;
+        // byte 8位
+        flags = new byte[(int) (length >> 3) + ((length & 7) > 0 ? 1 : 0)];
+
+        int index = 0;
+        for (int num : array) {
+            if (getFlags(num) != 1) {
+                array[index++] = num;
+                setFlags(num);
+            }
+        }
+
+        array= Arrays.copyOf(array,index);
+        System.out.println(Arrays.toString(array));
+
+    }
+}
+
+```
+
+
+
+写到这里已经基本上可以说是BitMap入门了，但是这种数据结构的优化从未停止。尤其是当内存有限，又涉及到大量数据排序和词频统计还要返回TopK一起的时候，这种情况特别复杂，所以放在以后讨论吧。
