@@ -137,21 +137,213 @@ sum+=~t&data[c]; //if data[c]<128 t=-1 ~t=0  & data =0
 
 
 
+##### 构造函数private
+
+当类中只有private构造函数，子类就不能构造它们，所以也就没有子类。
 
 
 
+##### MySQL Count(1)
+
+相当于Count(*) ，都包含 null，而Count(Column) 是特定列的行数
 
 
 
+##### 单例模式中的各个具体名词 
+
+[Java单例模式的不同写法](https://blog.csdn.net/fly910905/article/details/79286680)
+
+**饿汉模式**：一开始就创建了 `private static Singleton instance=new Singleten()` 实例，只需要等待调用，所以不存在并发错误
+
+**懒汉模式**：只有等到需要时才new出对象，是在一个方法中new对象，所以可能出现并发的情况，需要加个锁
+
+```java
+public class Singleton{
+    private static Singleton instance = null;
+    private Singleton(){}
+    public static Singleton newInstance(){
+        if(null == instance){
+            instance = new Singleton();
+        }
+        return instance;
+    }
+}
+```
 
 
 
+**双重校验锁**
+
+```java
+public class Singleton{
+    private volatile static Singleton instance;
+    private Singleton(){}
+    public static Singleton getInstance(){
+        if(instance==null){
+            synchronized(Singleton.class){
+                if(instance==null) //这一步是因为 当一个线程正在创建实例时，另一线程正在等待，当它创建完时，需要被可知，所以是volatile 。另一个等待的线程会检查instance
+                    instance=new Singleton();
+            }
+        }
+        return instance;
+    }
+}
+```
 
 
 
+**静态内部类**
+
+```java
+public class Singleton{
+    private static class SingletonHodler{
+        public static Singleton instance=new Singleton();
+    }
+    private Singleton(){}
+    public static Singleton getInstance(){
+        return SingletonHodler.instance;
+    }
+}
+
+```
+
+上面的实现是利用了Jvm的类加载机制来实现的单例，并不用担心并发的情况。也可以实现延迟加载，因为只有调用内部类的时候才回去实例化
 
 
 
+看到这里是不是觉得万事大吉了？nonono
+
+还可以利用**枚举类**来实现单例，这是Effective-java推荐的方式
+
+```java
+class Resource{
+    
+}
+public enum A{
+    INSTANCE;
+    private Resource resource;
+    private A(){
+        resource=new Resource();
+    }
+    public Resource getInstance(){
+        return resource;
+    }
+}
+```
+
+因为枚举类中的每个实例都是 static final 的，所以Resource只会被实例化一次 因为我们定义的枚举类中只有一个 实例 INSTANCE。 `A.INSTANCE.getInstance()`就可以获得唯一的对象资源 Resource
+
+
+
+以上的模式都有个共同的**缺陷**：
+
+- 需要额外的 序列化工作，否则每次反序列化一个序列化对象的时候都会创建一个新的实例
+- 可以使用反射强行调用私有构造器(这个时候我们可以 修改构造器，让它在创建第二个实例的时候抛出错误)
+
+
+
+##### 正则表达式
+
+\d 为数字      \D 非数字
+
+
+
+##### CAP
+
+在[理论计算机科学](https://zh.wikipedia.org/wiki/%E7%90%86%E8%AB%96%E8%A8%88%E7%AE%97%E6%A9%9F%E7%A7%91%E5%AD%B8)中，**CAP定理**（CAP theorem），又被称作**布鲁尔定理**（Brewer's theorem），它指出对于一个[分布式计算系统](https://zh.wikipedia.org/wiki/%E5%88%86%E5%B8%83%E5%BC%8F%E8%AE%A1%E7%AE%97)来说，不可能同时满足以下三点：[[1\]](https://zh.wikipedia.org/wiki/CAP%E5%AE%9A%E7%90%86#cite_note-Lynch-1)[[2\]](https://zh.wikipedia.org/wiki/CAP%E5%AE%9A%E7%90%86#cite_note-2)
+
+- 一致性（**C**onsistency） （等同于所有节点访问同一份最新的数据副本）
+- [可用性](https://zh.wikipedia.org/wiki/%E5%8F%AF%E7%94%A8%E6%80%A7)（**A**vailability）（每次请求都能获取到非错的响应——但是不保证获取的数据为最新数据）
+- [分区容错性](https://zh.wikipedia.org/w/index.php?title=%E7%BD%91%E7%BB%9C%E5%88%86%E5%8C%BA&action=edit&redlink=1)（**P**artition tolerance）（以实际效果而言，分区相当于对通信的时限要求。系统如果不能在时限内达成数据一致性，就意味着发生了分区的情况，必须就当前操作在C和A之间做出选择[[3\]](https://zh.wikipedia.org/wiki/CAP%E5%AE%9A%E7%90%86#cite_note-3)。）
+
+根据定理，分布式系统只能满足三项中的两项而不可能满足全部三项[[4\]](https://zh.wikipedia.org/wiki/CAP%E5%AE%9A%E7%90%86#cite_note-4)。理解CAP理论的最简单方式是想象两个节点分处分区两侧。允许至少一个节点更新状态会导致数据不一致，即丧失了C性质。如果为了保证数据一致性，将分区一侧的节点设置为不可用，那么又丧失了A性质。除非两个节点可以互相通信，才能既保证C又保证A，这又会导致丧失P性质。
+
+​	所以 CP 和AP  中一般保证AP，然后保证最终一致性是业界一般做法。
+
+
+
+##### 各种Join
+
+https://www.nowcoder.com/questionTerminal/75a8737dbed14ca88fea2e04000b7cf5
+
+来源：牛客网
+
+Inner join：又称为等值连接，只选择满足条件的行  
+
+   Outer join：外连接会保存没有关联的行   
+
+- ​     left outer join：保存左边表的所有行    
+- ​     right outer join：保存右边表的所有行    
+- ​     full join：保存所有没有关联的行，当某行在另一个表中没有匹配行时，则另一个表的列为空值
+
+
+
+##### 私有网段
+
+10.0.0.0/8:10.0.0.0-10.255.255.255
+172.16.0.0/12:172.16.0.0-172.31.255.255
+192.168.0.0/16:192.168.0.0-192.168.255.255
+
+
+
+##### JVM什么情况下会触发Full GC(Major GC)
+
+旧生代空间不足
+
+Permanet Generation（永久代）空间满
+
+统计得到的Minor GC晋升到旧生代的平均大小大于旧生代的剩余空间
+
+可以使用 Jmap dump查看JVM内存状态。
+
+
+
+##### String 为什么要设计成不可变
+
+这涉及到的问题比较多，比如内存，数据结构，线程安全等。
+
+要知道String的值实际上是字符数组，由于是private final 所以我们说String都是不可变的
+
+```java
+ /** The value is used for character storage. */
+    private final char value[];
+```
+
+实际上我们可以通过反射来改变value，不过这基本用不到。
+
+
+
+##### 1.字符串常量池的需要
+
+字符串使用率特别高，内存占用大，所以优化成了---》字符串常量池是Java堆内存中一个特殊的存储区域，当创建一个String对象时，假如该值在常量池中，那么这个对象的引用就会指向这个值。
+
+```java
+String s1="abc";
+String s2="abc";  //s1与s2是指向同一个 内存 s1==s2 true
+```
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/img/59.png?raw=true">
+
+由于String对象的hash值经常被使用，所以它有个hash属性
+
+```java
+private int hash; //缓存hashcode
+```
+
+字符串不变性保证了hash码的唯一性，因此可以不用担心hash变化，不用每次变化都计算一遍hash值。
+
+##### 2.安全性
+
+String被许多Java类库 用来当做参数，例如 网络连接地址URL，文件路径path，还有反射机制需要的String参数等。假如String可以变化，那么会有很多安全隐患，
+
+```java
+boolean connect(String s){
+    if(!isSecure(s)){
+        throw new SecurityException();
+    }
+    //关于s的其他操作，假如 String 可变，s 其他方法中被修改了，下面的操作可能就有问题了。
+}
+```
 
 
 
