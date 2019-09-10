@@ -122,3 +122,7 @@ ThreadPoolExecutor executor=new ThreadPoolExecutor(10, 20, 60, TimeUnit.SECONDS,
 
 [自动配置](https://segmentfault.com/a/1190000018011535)
 
+关键是 `@EnableAutoConfiguration`启用自动配置，内部实际上是去加载 `META-INFO/spring.factories`文件的信息后，筛选出`EnableAutoConfiguration`为key的数据，加载到IOC容器中，实现自动配置。
+
+- 而`META-INFO/spring.factories`是指 所有jar 包下的该文件，将其包装到Properties对象中
+- 从Properties对象获取到key值为`EnableAutoConfiguration`的数据，然后添加到容器里面
