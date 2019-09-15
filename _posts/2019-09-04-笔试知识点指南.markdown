@@ -347,3 +347,101 @@ boolean connect(String s){
 
 
 
+而String或者说其他**对象和基础类型的局部变量没有经过初始化的时候，是不能参与运算的**。属于**类变量的时候，JVM会把它们自动赋默认值，可以参与运算**。
+
+```java
+String s;
+String s1="s"+s; //编译错误，s没有初始化
+////////
+public class A{
+    String s;
+    public void test(){
+        String s1="s"+s; //没问题，jvm自动赋值s=null
+        int a;
+        int b=a+1; //编译错误，a没有初始化
+    }
+}
+```
+
+​	
+
+##### Java 移位运算
+
+```
+<< 左移运算符
+>> 右移云算符
+>>> 无符号右移，忽略符号位，空位都以0补齐
+```
+
+还有一个重点，Java的负数的二进制码是这样的  `-1   11111111 11111111 11111111 11111111` 
+
+`-2  11111111 11111111 11111111 11111110`  基本和2的二进制一样，就是前面的符号位为1，而无符号右移和右移的差异就在于负数的运算上，
+
+```java
+System.out.println(-1>>>5); //00000111111111111111111111111111  正数
+System.out.println(-1>>5);  //11111111111111111111111111111111  还是负数 -1
+```
+
+
+
+#####  new ArrayList(20); 扩容几次?
+
+A.0  B.1  C.2  D.3
+
+这里要注意，这是一类问题，不过**ArrayList的默认初始容量是 10**，**HashMap的默认初始容量是16**。不过如果一开始new的时候指定容量，比如上题**，不会触发扩容，所以是0次**。
+
+扩容策略也不一样，ArrayList `int newCapacity = oldCapacity + (oldCapacity >> 1);` 容量为原来的1.5倍； HashMap `newCap = oldCap << 1` 为原来的两倍
+
+Vector初始为10，增长为原来两倍。
+
+##### Integer 变量对比
+
+这个考的是一个知识点，用Integer初始化的变量，在-128~127的范围内会将值放到常量池中，超出范围之后就是两个对象了。类比Double，Boolean 等
+
+```java
+Integer a=127,b=127;
+System.out.println(a==b); //true
+Integer a=-128,b=-128;
+System.out.println(a==b); //true
+
+Integer a=-130,b=-130;
+System.out.println(a==b); //false
+Integer a=128,b=128;
+System.out.println(a==b); //false
+```
+
+
+
+##### OOM ： Metaspace
+
+从Jdk1.8之后，原本的PermGen(永久代，方法区)变更为了Metaspace，里面主要存储的是类信息：例如，class 名称，字段，方法，字节码(个类的class文件)，常量池，JIT优化代码(被inline)等
+
+所以会造成 Metaspace OOM，原因就是**加载到内存的class数量太多，或者体积太大了**，
+
+
+
+##### SynchronousQueue
+
+不同于ArrayBlockingQueue和LinkedListBlockingQueue，SynchronousQueue内部并没有缓存空间，**数据是在配对的生产者和消费者线程之间直接传递的。**也就是说，每当有线程要插入，就必须要等另一个取数据的线程一起，反之也是相同的。那直接传就好了，为啥还要这个SynchronousQueue呢？**把这种传递的过程引入第三方便于管理，然后使用队列还可以支持公平策略或者非公平策略** 
+
+常用于线程池，传入的阻塞队列就可以是这个，不过它的容量一直为0。
+
+
+
+##### JVM规定的类被初始化的情况
+
+遇到4条JVM字节码指令：new，getstatic，putstatic，invokestatic 。如果类还没初始化，则需要先触发其初始化。最常见的Java代码场景是：
+
+- 使用new 关键字实例化对象
+- 读取一个类的静态字段 (同时被final 修饰，在编译期已经放入常量池的静态字段除外)
+- 调用一个类的静态方法
+- 反射
+- 先父类
+
+
+
+##### 稳定排序与不稳定
+
+稳定：冒泡，插入，归并，基数排序
+
+不稳定：选择，快速，希尔，堆排序

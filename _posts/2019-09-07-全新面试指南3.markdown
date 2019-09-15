@@ -110,6 +110,14 @@ ThreadPoolExecutor executor=new ThreadPoolExecutor(10, 20, 60, TimeUnit.SECONDS,
 
 [CyC2018 Java并发](https://github.com/CyC2018/CS-Notes/blob/master/notes/Java%20%E5%B9%B6%E5%8F%91.md)
 
+[ConcurrentHashMap的并发机制](https://juejin.im/post/5aeeaba8f265da0b9d781d16) 
+
+使用HashMap在并发的情况下扩容可能会发生循环引用，CPU使用接近100%。所以HashMap并不是线程安全的，ConcurrentHashMap解决了这个问题，并在Jdk1.8中发生了较大变化
+
+1.8舍弃了segment，并且大量使用了synchronized(原本是使用ReentrantLock，因为synchronized做了很多优化，性能上已经不差了) 以及CAS无锁操作以保证ConcurrentHashMap的操作是线程安全的。
+
+通过锁住 Node 而不是 segment 来减小锁的粒度。使用三个CAS操作来确保node的操作原子性，这种方式代替了锁
+
 ##### Java 虚拟机 
 
 [CyC2018 Java虚拟机](https://github.com/CyC2018/CS-Notes/blob/master/notes/Java%20%E8%99%9A%E6%8B%9F%E6%9C%BA.md)
@@ -126,3 +134,173 @@ ThreadPoolExecutor executor=new ThreadPoolExecutor(10, 20, 60, TimeUnit.SECONDS,
 
 - 而`META-INFO/spring.factories`是指 所有jar 包下的该文件，将其包装到Properties对象中
 - 从Properties对象获取到key值为`EnableAutoConfiguration`的数据，然后添加到容器里面
+
+
+
+---
+
+#### 业务场景
+
+##### 1.SQL注入
+
+[Mysql Injection](https://www.pediy.com/kssd/pediy12/113294/809747/43528.pdf)  [渗透攻防web篇—SQL注入攻击初级](https://paper.seebug.org/15/#_1)
+
+Mysql 注入产生原因： 程序执行中未对敏感字符进行过滤，使得攻击者传入恶意字符串与结构化数据查询语句合并，并执行恶意代码；比如下面的sql语句，在手写sql的时候，或者使用Hibernate其实都会遇到sql注入的情况
+
+实际上 where 子句返回的是一个bool值，如果为true 就将该记录添加进结果集
+
+```sql
+select * from users where id = 1;
+select * from users where id = 1 and 1=2;  // 1=2为false，也就是说无论前面id是否等于1 ，最终结果都不会添加进结果集，因为where子句的结果都为false
+select * from users where id = 1 or 1=1; //where 子句的结果都为true，所以能够得到该表中的所有记录
+```
+
+是不是有种很神奇的感觉。还有更加神奇的操作，Union 用于合并两个select语句，执行第二条查询语句将返回值和本次查询值合并。 **两次查询的列数要保证一致**，否则会出语法错误。
+
+```sql
+ select * from account where accountId = 1 union select 1,2,3
+```
+
+第二个select语句值查询了第一列，第二列和第三列，这是个很有用的特性，比如我们想办法绕过登录验证时起到一些作用： [人人都可学会的MySQL高级注射技巧](https://paper.seebug.org/27/)
+
+假设一个验证登录的sql语句如下
+
+```sql
+select * from users where username='${username}' and password='${password}'
+```
+
+其中 username和password 都是从表单中提取出来的，使用union是怎么绕过去的呢？
+
+我们可以在 username的输入框中输入 `xxx' union select 1,'admin','password'#` 最后的井号在sql中是注释的意思，注释掉 后面`password='${password}'` 。整个sql执行的语句如下
+
+假设这个表只有三列：
+
+```sql
+select * from users where username='xxx' union select 1,'admin','123456'
+```
+
+前面执行的结果不存在，整个语句的查询结果自然就变成union后面的查询了。`userid=1,username=admin,password=123456`
+
+所以在password输入框 输入123456即可登录啦。
+
+
+
+##### 2.后台防止重复数据提交
+
+前端可以让提交数据的按钮变灰，不能重复提交。但是这也需要时间，还是很可能在极短时间内发生重复提交事件；还有**加验证码**（每提交一次，都要通过验证码，以前一直不知道验证码什么作用，现在知道了，限制重复提交）。
+
+不过不能相信太前端，后台也需要进行限制，其中一种方法就是 token 指令
+
+##### Java 使用Token令牌防止表单重复提交的步骤：
+
+- 在服务端生成一个唯一的随机标识号，专业术语叫token，同时在当前用户的Session域中保存这个token
+- 将token发送到客户端的Form表单中，在Form表单中使用隐藏域来存储这个Token，表单提交的时候会连同这个Token一起提交到服务器
+- 在服务端判断客户端提交上来的Token与服务器端生成的Token是否一致，如果不一致，就说明重复提交了，此时服务器端就可以不处理重复提交的表单。如果Token一致，则处理完后清除当前用户的Session域中存储的标识号。
+- 当前用户的Session中不存在Token时，也不处理表单请求
+
+##### 3.手写数据库连接池
+
+```java
+package com.company;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class DBPool {
+    private int init_count = 5; //连接池中 初始的连接数 ,默认为5个
+    private final int MAX_COUNT = 10; //最大连接数
+    private int current_count = 0; //当前正在使用的连接数
+
+    private List<Connection> pool = new ArrayList<>(); //连接池，
+
+    public DBPool(int initCount) {
+        this.init_count = initCount;
+        init();
+    }
+    
+    public DBPool(){
+        init();
+    }
+
+    private void init() {
+        for (int i = 0; i < init_count; i++) {
+            Connection connection = createConnection();
+            pool.add(connection);
+        }
+    }
+
+    public Connection createConnection() {
+        try {
+            Class.forName("com.mysql.jdbc.Driver");
+            return DriverManager.getConnection("jdbc:mysql://localhost:3306/test", "root", "root");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public Connection getConnection() {
+        if (!pool.isEmpty()) {
+            current_count++;
+            return pool.remove(0); //将连接池中第一个链接拿出来
+        }
+        if (current_count < MAX_COUNT) { //如果正在使用的连接数 小于 最大连接数
+            current_count++;
+            return createConnection(); //新建一个连接
+        }
+
+        throw new RuntimeException("连接数达到最大值");
+    }
+
+    /**
+     * 释放正在使用的连接，放回到连接池
+     */
+    public void releaseConnection(Connection connection) {
+        if (pool.size() < init_count) { //小于核心连接数
+            pool.add(connection);
+            current_count--;
+        } else { // 连接池中的容量大于核心连接数
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
