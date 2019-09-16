@@ -414,7 +414,9 @@ System.out.println(a==b); //false
 
 ##### OOM ： Metaspace
 
-从Jdk1.8之后，原本的PermGen(永久代，方法区)变更为了Metaspace，里面主要存储的是类信息：例如，class 名称，字段，方法，字节码(个类的class文件)，常量池，JIT优化代码(被inline)等
+从Jdk1.8之后，原本的PermGen(永久代，方法区)变更为了Metaspace，永久代里面主要存储的是类信息：例如，class 名称，字段，方法，字节码(个类的class文件)，常量池，JIT优化代码(被inline)等，而改成元空间之后，只存储类信息：
+
+方法区是一个 JVM 规范，永久代与元空间都是其一种实现方式。在 JDK 1.8 之后，**原来永久代的数据被分到了堆和元空间中。元空间存储类的元信息，静态变量和常量池等放入堆中**。
 
 所以会造成 Metaspace OOM，原因就是**加载到内存的class数量太多，或者体积太大了**，
 
@@ -445,3 +447,48 @@ System.out.println(a==b); //false
 稳定：冒泡，插入，归并，基数排序
 
 不稳定：选择，快速，希尔，堆排序
+
+
+
+##### Thread.yield()
+
+该调用声明了当前线程已经完成了生命周期最重要的事，可以切换给其他线程来执行。该方法只是对线程调度器的一个建议，而且也只是建议具有相同优先级的其他线程可以运行。
+
+```java
+public void run(){
+	Thread.yield();
+}
+```
+
+
+
+##### 线程之间的协作
+
+在线程中调用另一个线程的join()方法，会将当前线程挂起，转去执行另一个线程，等另一个线程执行完毕才会转回来执行该线程。
+
+```java
+public static void main(){
+    Thread a=new Thread(() -> System.out.println("A"));
+    Thread b=new Thread(() -> {
+        try {
+            a.join(); //先执行a线程
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println("B");
+    });
+    
+    b.start();
+    a.start();
+}
+```
+
+先打印A，然后再打印B。
+
+
+
+##### AQS
+
+CountDownLatch，CyclicBarrier 都是栅栏，不过后者可以循环使用。都是通过 `countDownLatch.await() ; cyclicBarrier.await();` 来做栅栏。
+
+Semaphore 信号量则是 `semaphore.acquire()`来阻拦 `semaphore.release()` 释放
