@@ -398,7 +398,131 @@ FileStatus[] fileStatuses = fs.globStatus(new Path("/2007/*/*"), new RegexExclud
 
 ##### Data Flow
 
+下面的图展示了HDFS的读数据流程
 
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/hadoop/img/13.png?raw=true">
+
+- 通过` FileSystem.open() ` 打开这个文件，这时候DistributedFileSystem 通过RPC(Remote Procedure Call) 来 访问namenode，**来获得文件的各个block的位置，其实就是存放block的datanode的位置**，并且datanode将根据和client的距离进行排序（这里的距离参考下节**Network Topology and Hadoop**），如果client本身是datanode，并且该文件有block在该节点上，就可以从本地读取数据啦。
+
+- DistributedFileSystem **返回一个FSDataInputStream(支持file seeks) 到client并用于读数据**，FSDataInputStream其实是包装了DFSInputStream（这个类管理datanode 和 namenode 的I/O）
+
+- client **调用 read()方法读取数据**，DFSInputStream存储了文件的前几个block的datanode的地址，**然后连接上文件中第一个block(因为一个block有放在多个datanode中)最近的的datanode**，在datanode的数据以流的形式返回到client，client不断调用read() 读取流中的数据。当block被读完了，DFSInputStream就会关闭datanode的连接，然后找到下一个block的最近datanode。这个过程对client是透明的，所以在client看来只是读取一个连续的流即可
+
+- 在按顺序读取block的时候，client还会调用namenode取回下一批datanodes的位置，当文件读取完毕时，FSDataInputStream.close() 关闭文件。
+
+在读数据的过程中，**如果DFSInputStream和datanode交流的时候遇到了error，DFSInputStream会尝试读取该block的另外的datanode(也是最近原则)，也会记下出现故障的datanode，之后读取数据的时候会避开这些datanode**。DFSInputStream还会验证从datanode中传输过来的数据的checksums。**如果遇到了故障的block，就会从其他datanode中读取该block副本，并且向namenode汇报这个故障**
+
+这种从namenode获得最佳datanode位置的设计让HDFS能更拓展更多的client，因为数据在整个集群中传递，流量就分散了速度就上来了，同时namenode只需要负责datanode的location请求，这些location都是在内存中的，速度快。
+
+##### Network Topology and Hadoop
+
+在局域网中**两个节点对对方是 close 状态**是什么意思呢？在高容量数据处理的环境中，限制因素就是两个节点之间传递数据的速度---带宽 （因为带宽在集群网络中是稀缺资源）。 而Network Topology的想法是**使用两个节点的带宽作为距离的度量**
+
+然而在实际情况中是**很难去度量集群中两个节点的带宽**，因为这**需要集群是静态**的并且**节点的增加会增加更多节点对**(因为需要知道这个新增节点和其他所有节点的 距离)，Hadoop采用了一个简单的方法 **将集群网络表示成树，并且它们之间的距离就是两个节点之间的最近共同祖先**
+
+**以下情景 可用带宽逐渐变小**
+
+- Processes on the same node
+- Different nodes on the same rack(机架，大致是连接同一台交换机)
+- Nodes on different racks in the same data center
+- Nodes in different data centers
+
+总共有三种级别 node ， rack ， data center。用简单的字母表示**第一个data center 第一个rack 第一个节点** 为**/d1/r1/n1**  
+
+- distance(/d1/r1/n1,/d1/r1/n1)=0 相同节点距离为0
+- distance(/d1/r1/n1,/d1/r1/n2)=2 不同节点相同机架 
+- distance(/d1/r1/n1,/d1/r2/n3)=4 不同机架同一数据中心
+- distance(/d1/r1/n1,/d2/r3/n4)=6 不同数据中心
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/hadoop/img/14.png?raw=true">
+
+Hadoop是如何定义 Network topology 呢？这个在后续章节中有说。简单来说就是 它**假设**网络都是平面的单层结构，换句话说**所有节点都在一个数据中心的一个机架上**
+
+##### Anatomy of a File Write
+
+下面的图中展示了 一个文件的创建，写入和关闭的整个过程。
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/hadoop/img/15.png?raw=true">
+
+先调用 **DistributedFileSystem.create()** 创建文件，**然后它会RPC在namenode的namespace中创建一个新文件**，这时候没有block与之关联。 **namenode会确保之前没有过同名文件并且该client有权限创建这个文件**。
+
+如果创建文件失败(比如file already exists)，client会抛出一个IOException。DistributedFileSystem返回一个FSDataOutputStream 给client，用于写入数据。**和read的情况类似，FSDataOutputStream包装了DFSOutputStream，用于处理与datanodes和namenode的通信。**
+
+当client写入数据的时候，DFSOutputStream会将它们切分成数据包并将其写入数据队列(*data queue*)。data queue被DataStreamer消费，**DataStreamer用于让namenode通过选择一系列合适的datanodes来存储备份来分配新的blocks**。这些datanodes组成一个pipeline(一般都是3个数据备份)。
+
+DataStreamer会将数据流式的传输进管道的第一个节点，这之后第一个节点的数据会通过管道流进第二个节点再到第三个节点。最后数据在管道中保持一致。(这是第四步)
+
+DFSOutputStream也维护了一个内部数据包队列，这些数据都是等待datanodes确认的，这个队列有个专门的名称 *ack queue*。只有当pipeline中的所有datanodes都确认了该数据包，才会将它从ack queue中remove。（这是第5步）
+
+**如果其中某个datanode失败了**，后面的策略对client是透明的。
+
+- First，关闭pipeline，并且将ack queue中的数据包都加到 data queue的最前面：这样故障节点的下游节点不会丢失数据包
+- **namenode会将该管道中其他datanode的该block一个新的标知，所以当故障节点恢复过来时会将该部分block删除**。故障节点被移除出pipeline，所以这个pipeline只剩两个节点了，这时候namenode注意到这个block只有两个备份就**会安排一个新的datanode做备份**，
+- 也可能出现多个节点都出现故障，虽然可能性微乎其微，只要`dfs.namenode.replication.min`replicas（默认为1）写入了，这个write就会成功，而备份的数量由`dfs.replication` (默认为3) 决定
+- 当client结束write，就会close流，这个操作会将剩下的所有数据包都刷进datanode pipeline等待确认，并与namenode联系表示这个文件已经完成了
+
+总的过程就是数据在进入pipepine之前被分成数据包进入data queue，进入pipeline之后就是进入ack queue等待pipeline的三个节点都有该数据包之后将其从ack queue中删除。最后ack queue空了之后，就继续从外面data queue那数据。
+
+##### Replica Placement
+
+namenode是如何选择datanodes来存放数据的呢？这里是可靠性和写带宽与读带宽的一个trade-off。比如，将所有的备份都放在同一个datanode中 最节省写带宽，但是它没有提供真正的数据冗余 一旦这个datanode故障了，数据就丢失了。而放在不同机架上读带宽又消耗很大
+
+事实上，将数据放在不同的数据中心才是真正的做到数据冗余，但是太消耗带宽了。即使放在同一个数据中心，也有不同的放置策略：
+
+**Hadoop的默认策略是将第一份数据放在client本身**(如果client是在集群外的，那么第一个节点就是随机的)，**第二个备份放在不同的机架上(也是随机的)，第三份也是在第二份的机架上，但是节点不一样(随机选取)**。再之后的备份就完全随机了，hadoop默认是3个备份。
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/hadoop/img/16.png?raw=true">
+
+这个策略兼顾了可靠性，读写带宽。
+
+##### Coherency Model
+
+FileSystem的一致性模型描述了文件读写的数据可见性问题，HDFS权衡了一些POSIX性能要求，所以某些操作的行为可能与预期不符。
+
+当创建一个文件之后，她在namespace中是可见的
+
+```java
+Path p=new Path("p");
+fs.create(p);
+assertThat(fs.exists(p),is(true));
+```
+
+但是写文件到该文件中并不保证可见，即使stream 被刷进去了，下面的代码显示 长度为0，其实我们已经写内容进去了
+
+```java
+FSDataOutputStream fsDataOutputStream = fs.create(new Path(""));
+fsDataOutputStream.write("content".getBytes("UTF-8"));
+fsDataOutputStream.flush();   assertThat(fs.getFileStatus(p).getLen(),is(0L))
+```
+
+一旦写入数据超过了一个block，该block对于其他新的reader来说就可见了。后续的block也是这样的，**正在写的block对其他reader来说是不可见的**
+
+所以Hadoop提供了一种方式来保证数据在正在写的block是可见的，`hflush()`
+
+```java
+fsDataOutputStream.hflush();   assertThat(fs.getFileStatus(p).getLen(),is(0L))
+```
+
+`hflush()`并不保证datanodes的数据写进了磁盘，只是刷进了内存中(而在内存中的坏处就是可能造成数据丢失，比如停电)。如果一定要刷进磁盘，可以用`hsync()`代替。当然直接close()也会隐式调用hflush。
+
+对于这种一致性设计，如果没有调用hflush()，hsync()就要做好数据丢失的准备(因为系统随时可能故障)。对于很多应用来说，这是不可接受的，所以**必须在合适的时候调用hflush()，比如在写了确定数量的records或者确定数量的字节后就调用一次**。
+
+而hflush()会带来一些性能开销(hsync更是)，所以次数需要把握好，这是数据健壮性(data robustness)和吞吐量之间的trade-off。
+
+##### Parallel Copying with distcp
+
+到目前为止HDFS的访问模式都是单线程访问，但是很多时候都是并行访问文件，这部分的代码需要开发人员自己写，hadoop提供一个有用的工具 *distcp*用于在集群中并行的复制数据
+
+```sh
+hadoop distcp sourcefile1 destfile
+hadoop distcp dir1 dir2
+```
+
+distcp是利用MapReduce job来实现的，不过没有reducers，每个文件都在单个的map中复制
+
+还有一些其他操作就不细说了
+
+##### 
 
 
 
