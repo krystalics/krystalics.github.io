@@ -1,0 +1,70 @@
+from 《Hadoop：the Definitive Guide》
+
+---
+
+#### YARN 
+
+Apache YARN(Yet Another Resource Negotiator) 是Hadoop的集群资源管理系统，**YARN在Hadoop2中引入来改善MapReduce，但是也可以支持其他的分布式计算**
+
+YARN并不和开发人员直接交互，它提供的API都是给分布式计算框架的，具体层级如下：
+
+ <img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/hadoop/img/17.png?raw=true">
+
+其实还有一层应用是在计算框架之上构建的，比如Pig ，Hive 和 Crunch是在MapReduce，Spark，Tez之上构建的，并没有直接和YARN交互。
+
+##### Anatomy of a YARN Application Run
+
+YARN通过两种类型的 长期运行的daemon 来提供核心服务：一个叫 *resource manager*(一个集群中只有一个) 来管理集群中的资源，另一个是*node managers* 在所有节点都运行来启动和监视 *containers* 。一个container 使用一组受约束的资源(比如内存，cpu，等)执行一个特定的程序，通常都是 Unix 进程或者Linux cgroup。下图说明了YARN的运行机制
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

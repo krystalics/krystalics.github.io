@@ -1,0 +1,487 @@
+from 《并发编程实战第二版》
+
+---
+
+#### 第五章 基础构建模块
+
+第四章中介绍了一些有效的方式，比如将线程安全性委托给现有的线程安全类，**只需让现有的线程安全类管理所有的状态即可**，JDK提供了多个相互协作的线程控制流同步工具类 **Synchronizer**，本章就是介绍其中最有用的并发构建模块以及它们是如何构建并发程序的。
+
+##### 同步容器类
+
+像Vector，Hashtable都是早期的产品了，虽然都基本放弃了使用，但是它们实现线程安全的方式还是值得一说的。 **将它们的状态封装起来，并对每个共有方法都进行同步，使得每次只有一个线程能够访问容器的状态。**
+
+但并不是说使用线程安全的类就万事大吉了，比如在客户端有两个线程对Vector操作，它们按照Vector的锁进行顺序操作，很可能出现其中一个线程执行到一半由另一个线程接手修改了一些东西，再转会原来线程操作的时候出了问题：
+
+<img src="https://github.com/krystalics/krystalics.github.io/blob/master/_posts/java/img/21.png?raw=true">
+
+所以这就需要客户端也上锁，让操作变成原子操作。
+
+```java
+public static Object getLast(Vector list){
+    synchronized(list){
+        int lastIndex=list.size()-1;
+        return list.get(lastIndex);
+    }
+}
+public static void deleteLast(Vector list){
+    synchronized(list){
+        int lastIndex=list.size()-1;
+        return list.remove(lastIndex);
+    }
+}
+```
+
+这种例子还有很多，比如在循环中遍历Vector，其他线程对其修改，需要靠锁去保护，牺牲了性能。
+
+```java
+synchronized(vector){
+    for(int i=0;i<vector.size();i++)
+    	doSomething(vector.get(i));
+}
+```
+
+##### 迭代器与ConcurrentModificationException
+
+虽然上面的例子都是使用Vector这个古老的容器，但是很多现代容器也并没有解决复合操作的问题。**使用迭代器Iterator在其他线程并发修改容器的时候，也是需要对容器上锁。**在设计同步容器类的**迭代器时并没有考虑到并发修改的问题，并且它们表现出来的是fail-fast快速失败**，即当迭代时有其他线程修改容器内容就会**立马抛出ConcurrentModificationException异常。**
+
+这种fail-fast的机制并不是一种完备的处理机制，只是捕获了并发的错误。它们的策略是将计数器的变化与容器关联起来，如果迭代期间计数器被修改，那么hasNext或next将抛出ConcurrentModificationException，然而这种检查并不是在同步的情况下做的，所以**可能出现失效的计数值，而迭代器却没有看到计数器的变化**。这种设计实际上是为了**降低并发修改操作的检测代码对程序性能的影响**
+
+很多时候开发人员并不想对容器上锁，因为性能会大打折扣，于是出现了一种**替代方案 clone 容器**，在副本上进行迭代。避免其他线程对其修改，但是克隆这个过程本身就是需要加锁的，也有显著的性能开销。
+
+具体采取的方案还应该和**容器大小**，**在每个元素上执行的工作**，迭代操作相对于容器其他调用的频率，以及响应时间和吞吐量等方面 做考虑。
+
+##### 迭代器的隐藏
+
+很多时候我们无意识就调用了蕴含迭代器的方法，比如`"set is "+hashset` 这里就是默认调用了hashset的toString()方法，toString()方法里是调用了迭代器的。而我们往往忽略了这一点，造成了ConcurrentModificationException。
+
+**如果状态与保护它同步代码之间相隔越远，开发人员就越容易忘记在访问状态时使用正确的同步**。容器的hashcode  equals等方法都会间接执行迭代操作，当容器作为另一个容器的元素或者键值时就会出现这种状况。同时 containsAll removeAll retainAll等操作都会把容器进行迭代。需要多加注意
+
+##### 并发容器
+
+加锁实际上就是让所有操作串行化，这是Java 5的策略，严重降低了并发性，当多个容器竞争的时候吞吐量严重降低。后续的JDK版本通过使用并发容器带起同步容器，可以极大的提高伸缩性并降低风险。
+
+##### ConcurrentHashMap
+
+这本书上的版本是分段锁阶段，就不详细展开了，因为jdk1.8采用的是CAS加优化后的synchornized，以及红黑树加持策略。所以就不细说了。
+
+##### CopyOnWriteArrayList
+
+用于替代同步容器中的synchronizedList，在某些情况下提供更好的并发性能，并且在迭代期间不需要对容器进行加锁或复制(类似的，CopyOnWriteArraySet替代同步Set)
+
+Copy-On-Write 写入时复制 容器的线程安全在于，只要正确的发布一个事实不可变对象，那么在访问对象时不再需要进一步的同步，在每次**修改时都会创建并重新发布一个新的容器副本，从而实现可变性。** 写入时复制容器的迭代器保留一个指向底层基础数组的引用，这个数组当前位于迭代器的起始位置，只要这个引用不修改，多个线程对其修改互不干扰，并且返回的元素与迭代器创建时的元素完全一致，不必考虑修改后带来的影响
+
+显然，**每当修改容器都会复制底层数组，需要一定的开销，特别是当容器规模变大。所以适用于迭代操作远多于修改操作时**，例如在分发通知时需要迭代已经注册的监听器链表，并调用每一个监听器，在多数情况下注册和注销事件监听器的操作员少于接受事件通知的操作。
+
+简单来说它的策略就是，当并发修改时复制一个新的容器进行修改，修改完之后将原容器的引用指向新容器。但这很明显只允许有一个修改线程，如果两个修改线程同时过来，就会有两个修改之后的容器，这部分的最终一致性策略还需要仔细的探讨。
+
+##### 阻塞队列和生产者----消费者模式
+
+最常见的生产者--消费者设计就是线程池与工作队列的组合，在Executor任务执行框架中就体现除了这种模式。阻塞队列在这种设计中非常的有用，尤其是在**构建高可靠的应用程序时，有界队列是一种强大的资源管理工具，它们能抑制并防止产生过的的工作项，使应用程序在负荷过载的情况下变得更加健壮。**
+
+demo 桌面搜索
+
+有一种类型的程序适合被分解成 生产者和消费者，例如**代理程序**，它将**扫描本地驱动器上的文件并建立索引以便随后进行搜索**，类似于某些桌面搜索程序或者Windows索引服务。在下列DiskCrawler中给出了一个生产者任务，即在**某个文件层次中搜索符合索引标准的文件，并将它们的名称放入工作队列**。而且，Indexer中还给出了消费者的任务即从**队列中取出文件名称并对他们建立索引**
+
+将扫描磁盘的工作和建立索引的工作分开，并发的进行处理。
+
+```java
+//扫描磁盘，将符合要求的文件都加入到队列中
+public class FileCrawler implements Runnable {
+    private final BlockingQueue<File> fileQueue;
+    private final FileFilter fileFilter;
+    private final File root;
+
+    FileCrawler(BlockingQueue<File> fileQueue, FileFilter fileFilter, File root) {
+        this.fileQueue = fileQueue;
+        this.fileFilter = fileFilter;
+        this.root = root;
+    }
+
+
+    @Override
+    public void run() {
+        try{
+            crawl(root);
+        }catch (InterruptedException e){
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private boolean alreadyIndexed(File file) {
+        return fileQueue.contains(file);
+    }
+
+    private void crawl(File root) throws InterruptedException {
+        File[] entries = root.listFiles(fileFilter);
+        if (entries != null) {
+            for (File entry : entries) {
+                if (entry.isDirectory()) {
+                    crawl(entry);
+                } else if (!alreadyIndexed(entry)) {
+                    fileQueue.put(entry);
+                }
+            }
+        }
+    }
+}
+
+```
+
+```java
+//不断的从队列中取出元素，进行映射
+public class Indexer implements Runnable {
+    private final BlockingQueue<File> queue;
+
+    public Indexer(BlockingQueue<File> queue) {
+        this.queue = queue;
+    }
+
+    @Override
+    public void run() {
+        try {
+            while (true) {
+                File file = queue.take();
+                System.out.println(file.getName()); //这里就简单的打印出名字
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        BlockingQueue<File> queue = new LinkedBlockingDeque<>(10);
+        FileFilter filter = new FileFilter() { //文件过滤器，这里全都通过
+            @Override
+            public boolean accept(File pathname) {
+                return true;
+            }
+        };
+
+        File file = new File("C:\\Users\\12857\\Desktop");
+        File[] roots = file.listFiles();
+        for (File root : roots) {
+            new Thread(new FileCrawler(queue, filter, root)).start();
+        }
+        
+		for (int i = 0; i < 10; i++) {
+            new Thread(new Indexer(queue)).start();
+        }
+    }
+}
+
+```
+
+缺点就是这里的消费者一直运行，导致程序不能终止，这点在后续的章节中会有处理。
+
+##### 串行线程封闭
+
+这个问题有点抽象，关于可变对象所有权的安全转移问题。不细说
+
+##### 双端队列和工作密取
+
+Java 6增加的两种容器 Deque(发音 deck)和BlockingDeque 分别是对Queue和BlockingQueue进行了扩展。Deque是一个双端队列，实现了队列头和队列尾的高效插入和移除，具体实现包括ArrayDeque和LinkedBlockingDeque。
+
+正如阻塞队列适用于生产者消费者模型，双端队列同样适用于另一种相关模式，即工作密取 Work Stealing。在生产者消费者模型中所有消费者共享一个工作队列，而工作密取设计中 每个消费者都有各自的双端队列。如果一个**消费者完成了自己的双端队列中的全部工作**，那么它可以**从其他消费者双端队列末尾秘密地获取工作。** 
+
+因为有这种机制，所以密取工作模式比传统的生产者-消费者模式具有更高的可伸缩性，因为工作者线程不会在单个共享的任务队列上发生竞争。在大多数时候，它们只是访问自己的双端队列，从而极大地减少竞争。当工作者线程需要访问其他双端队列时，是从尾部获取工作进一步降低队列上的竞争程度。
+
+工作密取设计非常适用于 **既是消费者也是生产者问题**-----当**执行某个工作时，可能导致出现更多的工作**。比如在网页爬虫处理一个页面时，通常会发现有更多的页面需要处理。类似的还有搜索图的算法，例如在垃圾回收阶段对堆进行标记，都可以通过工作密取机制来实现高效并行。
+
+##### 阻塞方法与中断方法
+
+线程会阻塞或暂停执行，原因可能有：等待I/O操作结束，等待获得一个锁，等待从Thread.sleep方法中醒来，或是等待另一个线程的计算结果。当线程阻塞时，通常被挂起，并处于某种阻塞方法(BLOCKED,WAITING,TIMED_WAITING) 。
+
+阻塞操作与执行时间很长的普通操作相比，被阻塞的线程必须等待某个不受它控制的事件发生后才能继续执行，例如等待I/O操作完成，等待某个锁变成可用...只有当某个外部事件发生时，线程被置回RUNNABLE状态，并可以再次被调度执行。
+
+BlockingQueue的put和take方法会抛出检查异常(Checked Exception) InterruptedException，这与类库中的其他一些方法相同 Thread.sleep。当**某方法抛出InterruptedException 说明该方法是阻塞方法**，如果这个方法被中断，将**努力提前结束阻塞状态**
+
+而怎么处理这个InterruptedException异常呢？
+
+- 继续抛出它，throws InterruptedException，将它传递下去
+- 恢复中断，有时候不能抛出它，例如当代码是Runnable的一部分时，必须捕获这个异常。并通过调用当前线程上的interrupt方法恢复中断
+
+```java
+public class TaskRunnable implements Runnable {
+    BlockingQueue<Task> queue;
+
+    @Override
+    public void run() {
+        try {
+            queue.take();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+}
+```
+
+如果**捕获了InterruptedException而不做处理，将会使更高层的代码无法对中断采取处理措施**，只有一种情况可以屏蔽中断，即对Thread扩展，并且能够控制调用栈上所有更高层的代码。
+
+##### 同步工具类
+
+在容器类中，只要它可以**根据其自身的状态来协调线程的控制流**，阻塞队列可以作为同步工具类，还包括信号量Semaphore 栅栏Barrier 以及闭锁 Latch 。
+
+所有的同步工具类都包含一些特定的结构化属性：封装了一些状态，这些**状态将决定执行同步工具类的线程是继续执行还是等待**，此外还提供了一些方法进行操作，以及另一些方法用于高效地等待同步工具类进入到预期状态。
+
+##### 闭锁
+
+是一种同步工具类，可以延迟线程的进度直到到达其终止状态，闭锁的作用相当于一扇门：在闭锁达到结束状态之前，这扇门一直是关闭的，并且没有线程能够通过。当结束状态达到时，这扇门将永远会打开并允许所有线程通过。状态不可恢复
+
+CountDownLatch是一种灵活的闭锁实现，可以在上述各种情况中使用，它可以使一个或多个线程等待一组事件发生。闭锁状态包括一个计数器，该计数器被初始化为正数，表示需要等待的事件数量，**countDown方法递减计数器，表示已经有一个事件发生了**，**而await()方法等待计数器达到0，这表示需要所有事件都发生。await会阻塞至计数器为0，或者等待的线程中断，或者等待超时。**
+
+```java
+public long timeTasks(int nThreads, final Runnable task) throws InterruptedException {
+        final CountDownLatch startGate=new CountDownLatch(1);
+        final CountDownLatch endGates=new CountDownLatch(nThreads);
+
+        for (int i = 0; i < nThreads; i++) {
+            Thread t=new Thread(){
+                public void run(){
+                    try { 
+                        startGate.await(); //等待开门
+                        try{
+                            task.run();
+                        }finally {
+                            endGates.countDown();
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            };
+            t.start();
+        }
+
+        long start=System.nanoTime();
+        startGate.countDown(); //开门
+        endGates.await(); //等待关门，等nThreads个线程都跑完 在执行后续操作
+        long end=System.nanoTime();
+        System.out.println(end-start);
+        return end-start;
+    }
+```
+
+使用闭锁的原因：假如我们需要测试某个任务n个线程并发执行需要的时间，如果不用闭锁，直接启动它们，先启动的线程会领先后启动的线程，并且活跃线程数量随着时间推移慢慢减少，竞争程度也在不断发生变化，使用闭锁将所有线程同时工作，而结束门会等待最后一个线程完毕，而不是顺序地等待每个线程完成。
+
+##### 信号量
+
+计数信号量(Counting Semaphore)用来**控制同时访问某个特定资源的操作数量**，或者同时执行某个特定操作的数量。计数信号量还可以用来**实现某种资源池，或者对容器施加边界**。
+
+Semaphore中管理着一组虚拟的许可permit ，许可的初始数量可以通过构造函数来指定。在执行操作的时候可以首先获得许可(只要池中还有剩余的permit)，并在使用后释放permit。**如果没有permit，那么acquire将阻塞直到有permit(或者直到被中断或者超时)**。release方法将返回一个permit。
+
+计算信号量的简化形式是二值信号量，即初始值为1的Semaphore。二值信号量可以用作互斥体mutex，并具备不可重入的加锁语义：谁拥有这个唯一的permit，谁就有了这个互斥锁
+
+Semaphore可以用于实现资源池，例如 数据库连接池，我们可以构造一个固定长度的资源池，当池为空的时候将请求资源失败。但很多时候我们希望看到的是 阻塞而不是请求失败。当池非空的时候解除阻塞。
+
+如果将Semaphore的计数值初始化为池的大小，并且在池中获取一个资源之前必须先acquire方法获得一个许可，在资源返回池之后调用release释放许可。
+
+在构造阻塞对象池的时候，更多的是用BlockingQueue来保存池的资源。同样可以使用Semaphore让任何一种容器变成有界容器。如下例程序所示：
+
+```java
+public class BoundedHashSet<T> {
+    private final Set<T> set;
+    private final Semaphore sem;
+
+    public BoundedHashSet(int bound) {
+        this.set = Collections.synchronizedSet(new HashSet<>());
+        sem = new Semaphore(bound);
+    }
+
+    public boolean add(T o) throws InterruptedException {
+        sem.acquire();
+        boolean wasAdded = false;
+        try {
+            wasAdded = set.add(o);
+            return wasAdded;
+        } finally {
+            if (!wasAdded) { //如果添加元素失败，则释放这个permit
+                sem.release();
+            }
+        }
+    }
+    
+    public boolean remove(T o){
+        boolean wasRemoved=set.remove(o);
+        if(wasRemoved){
+            sem.release(); //删除掉之后释放permit
+        }
+        return wasRemoved;
+    }
+}
+
+```
+
+##### 构建高效且可伸缩的结果缓存
+
+几乎所有的服务器应用都会以某种形式的缓存。重用之前计算的结果能够降低延迟，提高吞吐量，但却消耗更多的内存。类似于递归时自顶向下加缓存。
+
+**简单的缓存可能会将性能瓶颈转为可伸缩瓶颈，即使缓存只是提高单线程的性能。本节我们开发一个高效且可伸缩的缓存，用于改进一个高计算开销的函数。接下来将一步一步的构建这个缓存结构**。
+
+1.首先是采用简单的HashMap
+
+```java
+public interface Computable<A,V> {
+    V compute(A arg) throws InterruptedException; //用来模拟高性能开销函数
+}
+
+public class ExpensiveFunction implements Computable<String, BigInteger> {
+    @Override
+    public BigInteger compute(String arg) throws InterruptedException {
+        // 一段漫长的计算后
+        return new BigInteger(arg);
+    }
+}
+
+public class Memoizer1<A, V> implements Computable<A, V> {
+    private final Map<A, V> cache = new HashMap<>();
+    private final Computable<A, V> c;
+
+    public Memoizer1(Computable c) {
+        this.c = c;
+    }
+
+    @Override
+    public synchronized V compute(A arg) throws InterruptedException {
+        V result = cache.get(arg);
+        if (result == null) { //先检查结果有没有在缓存中
+            result = c.compute(arg);
+            cache.put(arg, result);
+        }
+        return result;
+    }
+}
+
+```
+
+因为HashMap不是线程安全的，所以需要在整个方法加锁，明显会有伸缩性问题：每次只有一个线程能够执行compute，如果另一个线程正在计算结果，其他调用compute的线程可能会阻塞很长时间。
+
+所以在**第二种**方法中我们采用ConcurrentHashMap来代替HashMap，从而将compute的synchronized解除，因为ConcurrentHashMap是线程安全的。采用ConcurrentHashMap会有一个问题，**如果某个线程启动了一个开销很大的计算，而其他线程并不知道这个计算正在进行，可能会造成重复计算（因为compute没有锁了）**
+
+在没有锁的情况下，可以通过FutureTask来解决这个问题。FutureTask表示一个计算的过程，这个过程可能已经计算完成，也可能正在进行。如果有结果可用，那么FutureTask.get将立即返回结果，否则将会一直阻塞直到结果计算出来再将其返回
+
+```java
+public class Memoizer3<A, V> implements Computable<A, V> {
+    private final Map<A, Future<V>> cache = new ConcurrentHashMap<>();
+    private final Computable<A, V> c;
+
+    public Memoizer3(Computable c) {
+        this.c = c;
+    }
+
+    @Override
+    public V compute(A arg) throws InterruptedException {
+        Future<V> f = cache.get(arg); //检查计算是否已经开始
+        if (f == null) { //为null就是没有开始，下面将它的计算启动，到f.get()阻塞返回结果
+            Callable<V> eval = () -> c.compute(arg);
+            FutureTask<V> ft = new FutureTask<>(eval);
+            f = ft;
+            cache.put(arg, ft);
+            ft.run(); //这里调用c.compute(arg)
+        }
+        try {
+            return f.get();
+        } catch (ExecutionException e) {
+            return null; //这里有异常就返回null
+        }
+    }
+}
+```
+
+使用了Future之后，**缓存中不需要等compute计算就会有值，这样就会很大程度上避免重复计算问题。**它的漏洞就在于，可能存在两个线程计算出相同值的漏洞，虽然概率很小，因为`cache.put(arg,ft)`并不是原子的（它是一个复合操作 **若没有则添加**），所以还是**有可能存在两个线程同时计算一个值的情况**。
+
+所以最终的方案就是使用 ConcurrentHashMap的putIfAbsent 原子方法将future放到缓存中
+
+```java
+public class Memorizer<A, V> implements Computable<A, V> {
+
+    private final Map<A, Future<V>> cache = new ConcurrentHashMap<>();
+    private final Computable<A, V> c;
+
+    public Memorizer(Computable c) {
+        this.c = c;
+    }
+
+    @Override
+    public V compute(A arg) throws InterruptedException {
+        Future<V> f = cache.get(arg); //检查计算是否已经开始
+        if (f == null) { //为null就是没有开始，下面将它的计算启动，到f.get()阻塞返回结果
+            Callable<V> eval = () -> c.compute(arg);
+            FutureTask<V> ft = new FutureTask<>(eval);
+            f = cache.putIfAbsent(arg, ft);
+            if (f == null) {
+                f = ft;
+                ft.run();
+            }
+        }
+        try {
+            return f.get();
+        } catch (ExecutionException e) {
+            cache.remove(arg, f); //发生异常就需要remove掉该future，因为这个计算没有结果了
+            return null; //这里有异常就返回null
+        }
+    }
+
+}
+
+```
+
+而缓存Future的坏处是 可能导致 缓存污染（Cache Pollution）问题：如果某个计算被取消或者失败，那么在计算这个结果时将指明计算过程被取消或者失败。为了避免这种情况，如果Memorizer发现计算被取消，就会将该future从缓存中移除，如果检测到RuntimeException也会移除该futuure。
+
+而**缓存逾期问题**可以通过FutureTask为每个结果指定一个逾期时间，并且定期扫描缓存中逾期的元素。但是仍然没有解决**缓存清理问题**，即移除旧的计算结果以便给新的计算结果腾出空间，从而使缓存不会消耗过多内存。
+
+如何使用我们构建的并发缓存体系？可以参考第二章的因式分解
+
+```java
+public class Factorizer implements Servlet{
+    private final Computable<BigInteger,BigInteger[]> c=new Computable<BigInteger,BigInteger[]>{
+        public BigInteger[] compute(BigInteger arg){ //这里定义future中的要跑的方法
+            return factor(arg);
+        }
+    }
+    
+    private final Computable<BigInteger,BigInteger[]> cache=new Memorizer<>(c);
+    
+    public void service(ServletRequest req,ServletResponse resp){
+        try{
+            BigInteger i=extractFromRequest(req);
+            encodeIntoResponse(resp,cache.compute(i));
+        }catch(InterruptedException e){
+            encodeError(resp,"factorization interrupted");
+        }
+       
+    }
+}
+```
+
+ 
+
+##### 本章总结：
+
+- 可变状态是至关重要的，**所有的并发问题都可以归结为如何协调对并发状态的访问**，可变状态越少，就越容易确保线程安全性
+- **尽量将field声明为final类型**，除非它们是可变的
+- 不可变对象一定是线程安全的，能够极大降低并发编程的复杂性。
+- 封装有助于管理复杂性
+- **用锁保护每个可变变量**
+- 在保护同一个不可变性条件中的所有变量时，要使用同一个锁
+- 在**执行复合操作时要持有锁**
+- 如果从多个线程中访问同一个可变变量而没有同步机制，程序就是有bug
+- 不要故作聪明的使用同步
+- 在**设计过程中要考虑线程安全，或者在文档中明确指出线程不安全**
+- 将同步策略文档化
+
+
+
+
+
+
+
+
+
+
+
+
+
