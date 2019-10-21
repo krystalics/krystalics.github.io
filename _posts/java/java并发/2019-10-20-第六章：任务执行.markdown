@@ -1,0 +1,298 @@
+from 《java 并发编程实战》 第二部分 结构化并发应用程序
+
+---
+
+#### 第六章 任务执行
+
+首先是一段官话：大多数并发应用程序都是围绕“**任务执行**” 来构造的：任务通常是一些抽象的且离散的工作单元。通过应用程序的工作分解到多个任务中，可以**简化程序的组织架构**，提供一种自然的**事务边界**来**优化错误恢复过程**，以及提供一种自然的并行工作结构来提升并发性
+
+##### 在线程中执行任务
+
+在正常负载下，服务器应用应该同时表现出 良好的吞吐率和快速的响应性。应用程序提供商希望尽可能的提供服务给更多的用户，从而降低每个用户的服务成本，而用户希望尽快获得响应。这就是要求 程序能够做到 又快负载又高。
+
+而且当负载过高时，应用程序不应该直接崩溃，而是性能逐渐降低。要实现这些东西，就应该选择**清晰的任务边界**以及明确的**任务执行策略**。
+
+大多数服务器程序都提供了一种自然的**任务边界**选择方式：**以独立的客户请求作为边界**。Web服务器，邮件服务器，文件服务器，EJB容器以及数据库服务器等都是通过网络接受远程客户端的连接请求。将独立的请求作为任务边界，既可以实现任务的独立性，又可以实现合理的任务规模。
+
+以Web服务器为例，如果采用单线程服务那么所有的请求连接到服务器就会形成一个队列，串行的处理这些请求，如果没有什么耗时的操作（比如I/O，数据库之类的勉强还可以接受）但是很明显这个做法是不能适应现代服务器的访问量的。
+
+而为每一个连接都创建一个线程，可以加快响应速度，但是因为创建线程的消耗比较大，一个正常的服务器同时能够承担的线程数量是有限的，所以为每一个连接创建一个线程是不现实的。
+
+可以说在一定范围内增加线程数是可以提高系统吞吐率的，但是超出这个范围就很可能 OOM 以及降低程序的执行速度。
+
+所以目前最合适的方式就是采用线程池，给定一定数量的线程来工作。能够很好的兼顾吞吐率和响应时间，也是业界主流的方式。而线程池也不用我们自己去搭建，JDK提供了一种灵活的线程池实现作为 Executor框架的一部分
+
+在Java类库中，任务执行的基本单元不是线程而是Executor。
+
+```java
+public interface Executor{
+    void execute(Runnable command);
+}
+```
+
+虽然只是简单的接口，但是为灵活且强大的异步任务执行框架提供了基础，该框架能支持多种不同类型的任务执行策略。将任务提交和执行解耦，用Runnable来表示任务，Executor还为管理任务的生命周期做了支持（在它的子类中）
+
+Executor基于生产者-消费者模式，提交任务的操作相当于生产者，执行任务的线程相当于消费者。下面简单的demo来说明Executor作为Web服务器是怎么运作的
+
+```java
+public class TaskExecutionWebServer{
+    private static final int NTHREADS=100;
+    private static final Executor exec=Executors.newFixedThreadPool(NTHREADS);
+    
+    public static void main(String[]args){
+        ServerSocket socket=new ServerSocket(80);
+        while(true){
+            final Socket connection=socket.accept();
+            Runnable task=()->handleRequest(connection);
+            exec.execute(task);
+        }
+    }
+}
+```
+
+上面的代码采用了JDK提供的Executor，我们自己也可以定制化Executor，只需要继承Executor，实现execute方法即可。
+
+```java
+public class ThreadPerTaskExecutor implements Executor{
+    pubilc void execute(Runnable command){
+        new Thread(command).start(); //在处理时开一个新线程处理
+        //或者 串行执行任务
+        // command.run(); 
+    }
+}
+```
+
+##### 执行策略都有哪些?
+
+执行策略中定义了任务执行的 What ，Where，When，How等方面
+
+- What 在什么线程中执行任务，按照什么顺序执行任务 （FIFO,LIFO,优先级?）执行一个任务之前或者之后，应该进行哪些动作
+- How many 有多少个任务能并发执行，有多少个任务在等待执行
+- How 如果系统由于过载而需要拒绝一个任务，那么应该选哪一个任务(Which)？如何通知应用程序有任务被拒绝(How)
+
+有很多中策略可以说，每一种都是资源管理工具，最佳策略取决于可用的计算资源以及对服务质量的需求。通过限制并发任务的数量，可以确保应用程序不会由于资源耗尽而失败，或者由于资源竞争上严重影响性能。
+
+**尽量不要自己new Thread，而是多考虑能不能用Executor框架来做**，有关于线程池这里就不详细写了，因为在这之前就已经详细接触过线程池了，理解了线程池的工作原理之后，其他的API都是浮云。
+
+##### Executor的生命周期
+
+它生命周期管理由它的子类ExecutorService来做，因为JVM只有在所有非daemon线程都终止后才会退出，如果无法正确关闭Executor，就会导致JVM无法关闭。因为Executor是以异步的方式执行任务，因此在任何时刻，之前提交的任务不是立刻可见的。所以专门拓展了ExecutorService来管理生命周期。
+
+包括**三个状态：运行，关闭，已终止**。
+
+```java
+public interface ExecutorService implements Executor{
+    void shutdown();
+    List<Runnable> shutdownNow();
+    boolean isShutdown();
+    boolean isTerminated();
+    boolean awaitTermination(long timeout,TimeUnit unit) throws InterruptedException;
+   	//...
+}
+```
+
+其中 shutdown方法执行缓慢关闭过程：不再接受新任务，同时等待已经提交的任务执行完成，包括那些未开始的任务。 shutdownNow则是粗暴的关闭过程：将尝试取消所有正在运行的任务，并且不再启动队列中尚未开始的任务。
+
+ExecutorService关闭后提交的任务将由 拒绝执行处理器Rejected Execution Handler 来处理。等待所有任务完成之后，ExecutorService将会进入终止状态。
+
+##### 延迟任务与周期任务
+
+Timer类和TimerTask已经在Java 5之后很少使用了，书中也不建议使用。因为一些bug比较棘手，一般都是采用 ScheduledThreadPoolExecutor作为周期任务的选择，如果一定想要自己定制调度服务，可以采用 **DelayQueue**
+
+##### 找出可利用的并行性
+
+Executor框架帮助指定执行策略，使用它需要指定 Runnable 作为任务。大多数服务应用都是采取 **单个客户请求** 作为**任务边界**，但有些时候任务边界并不明确，例如在很多桌面应用程序中，即使是服务器应用程序，在**单个客户请求**中仍然可能有 **可发掘的并行性**。例如：数据库服务器。
+
+本节将给出不同版本的组件，并且每个版本都实现了一定性的并发性。该示例组件实现浏览器程序中的页面渲染(Page-Rendering)功能，它的作用是**将HTML页面绘制到图像缓存**中。为了简便，假设HTML页面只包含标签文本，以及预定义大小的图片和URL。
+
+##### 示例1：简单的串行的页面渲染器
+
+最简单的方法就是对**HTML文档进行串行处理**，当遇到文本标签的时候，将其绘制到图像缓存中；当遇到图片引用时，先通过网络获取它然后再将其绘制到图像缓存，这很容易实现。只需要程序将输入中的每一个元素处理一次（甚至不需要缓存文档），但这种方法可能会令用户感到烦恼，他们必须等待很长时间，直到显示所有文本
+
+另一种串行处理方法先绘制文本元素，同时为图像预留出矩形的占位空间在处理完了第一遍文本后，程序再开始下载图像，并将它们会知道相应的占位空间中。图像下载的大部分时间都是等待I/O操作执行完成，在这期间CPU几乎不做任何工作，因此这种串行方式没有充分利用CPU，使得用户看到最终页面之前要等待过长的时间。
+
+通过将任务分解成多个独立的任务并发执行，能够获得更高的CPU利用率和时间灵敏度
+
+```java
+public class SingleThreadRenderer{
+    void renderPage(CharSequence source){
+        renderText(source);
+        List<ImageData> imageData=new ArrayList<>();
+        
+        for(ImageInfo info:scanForImageInfo(source)){
+            imageData.add(info.downloadImage());
+        }
+        
+        for(ImageData data:imageData){
+            renderImage(data);
+        }
+    }
+}
+```
+
+##### 携带结果的任务Callable与Future
+
+Runnable不能够返回一个值或抛出一个受检查的异常，许多任务都是存在延迟操作：数据库查询，I/O，网络上获取资源等。对于这些任务Callable是更好的抽象，可以返回一个值并且可能抛出一个异常。
+
+Executor执行的任务有4个生命周期阶段：创建，提交，开始和完成。Future表示一个任务的生命周期，并提供了相应的方法来判断是否已经完成或者取消，以及获取任务的结果和取消任务等。
+
+##### 示例2：使用Future实现页面渲染器
+
+为了使页面渲染器实现更高的并发性，首先将渲染过程分解为两个任务，**一个是渲染所有的文本，另一个是下载所有图像**。（因为其中一个任务是CPU密集型，而另一个任务是I/O密集型，因此这种方法即使在单CPU系统上也能提升性能）
+
+Callable和Future有助于表示这些协同任务之间的交互，在下面的例子中创建了个Callable来下载所有的图像，并将其提交到ExecutorService中。利用Future使渲染文本和图像下载并发执行，但是它的缺陷就是 需要等所有图像都下载完毕才显示，而不是下载一张看一张。
+
+```java
+public class FutureRenderer {
+    private final ExecutorService executor = Executors....;
+
+    void renderPage(CharSequence source) {
+        final List<ImageInfo> imageInfos=scanForImageInfo(source);
+        Callable<List<ImageData>> task=new Callable<List<ImageData>>() {
+            @Override
+            public List<ImageData> call() throws Exception {
+                List<ImageData> result=new ArrayList<>();
+                for(ImageInfo info:imageInfos){
+                    result.add(info.downloadImage());
+                }
+                return result;
+            }
+        };
+        
+        Future<List<ImageData>> future=executor.submit(task);
+        renderText(source);
+        
+        try{
+            List<ImageData> imageData=future.get();
+            for(ImageData data:iamgeData){
+                renderImage(data);
+            }
+        }catch (InterruptedException e){
+            Thread.currentThread().interrupt(); //重新设置线程的中断状态
+            future.cancel(true); //取消任务
+        }catch (ExecutionException e){
+            throw launderThrowable(e.getCause());
+        }
+    }
+}
+
+```
+
+##### 在异构任务并行化中存在的局限
+
+上述的代码中，将渲染HTML分成了两个任务：渲染文本和图像下载。如果渲染文本的速度远远高于图像下载速度（实际上的确是这样的），那么程序最终的性能和串行化执行没有太大的区别。只有大量相互独立且同构的任务可以并发进行处理，才能体现出将程序的动作负载分配到多个任务中带来的真正性能提升
+
+##### CompletionService ：Executor和BlockingQueue的结合体
+
+如果像Executor提交一组任务，每一个任务都要不时查询进度，就会反复的调用get()方法，通过轮询的方式判断任务是否完成。虽然可行，但是比较繁琐。更好的方式是 CompletionService（完成服务）
+
+由Executor和BlockingQueue的功能融合在一起，可以将Callable的任务提交给它来执行，然后使用类似于队列操作的take()和poll()等方法来获得已完成的结果，而这些结果会在完成时将被封装成Future，
+
+ExecutorCompletionService的实现非常简单，在构造函数中创建一个BlockingQueue来保存计算结果。当计算完成时，调用FutureTask.done()方法。当提交某个任务时，该任务将首先包装成一个QueueingFuture——FutureTask的子类，然后再改写子类的done方法，将结果放到BlockingQueue中。
+
+```java
+BlockingQueue<QueueingFuture> completionQueue=new ArrayBlockingQueue<>(10);
+private class QueueingFuture<V> extends FutureTask<V>{
+    QueueingFuture(Callable<V> c){
+        super(c);
+    }
+    QueueingFuture(Runnable t,V r){
+        super(t,r);
+    }
+
+    protected void done(){
+        completionQueue.add(this);
+    }
+}
+```
+
+##### 使用CompletionService实现页面渲染器
+
+从两个方面提高页面渲染器的性能：**缩短总运行时间以及提高响应性**。**为每一幅图像的下载都创建一个独立任务**，**并在线程池中执行它们**，从而将串行的下载过程转换为并行的过程：这将减少下载所有图像的总时间。此外通过从CompletionService中获取结果以及每张图片在下载后立刻显示出来，能使用户获得一个更加动态和更高响应性的用户界面。
+
+```java
+public class Renderer {
+    private final ExecutorService executor;
+
+    Renderer(ExecutorService executor) {
+        this.executor = executor;
+    }
+    
+    void renderPage(CharSequence source){
+        List<ImageInfo> info=scanForImageInfo(source);
+        CompletionService<ImageData> completionService=new ExecutorCompletionService<>(executor);
+        for(final ImageInfo imageInfo:info){
+            completionService.submit(new Callable<ImageData>() {
+                @Override
+                public ImageData call() throws Exception {
+                    return imageInfo.downloadImage();
+                }
+            });
+        }
+        
+        renderText(source);
+        
+        try{
+            for (int i = 0,n=info.size(); i <n ; i++) {
+                Future<ImageData> f=completionService.take();
+                ImageData imageData=f.get;
+                renderImage(iamgeData);
+            }
+        }catch (InterruptedException e){
+            Thread.currentThread().interrupt();
+        }catch (ExecutionException e){
+            throw launderThrowable(e.getCause());
+        }
+    }
+}
+```
+
+##### 为任务设置时限
+
+有时候，如果某个任务无法再指定时间内完成，那么将不再需要它的结果，此时可以放弃这个任务。例如，在某个Web应用程序从外部的广告服务器上获取信息，但如果该应用程序在两秒钟内得不到响应，那么将显示一个默认的广告，这样即使不能获得广告信息，也不会影响用户体验。
+
+做法很简单，在future.get(设置超时时间) 即可。
+
+```java
+try{
+    ad=f.get(timeout);
+}catch(ExecutionException e){
+    ad=DEFAULT_AD;
+}catch(TimeoutException e){
+    ad=DEFAULT_AD;
+    f.cancel(true);
+}
+```
+
+##### 示例：旅行预订门户网站
+
+考虑这样一个业务场景：一个旅行预订门户网站，用户输入旅行的日期和其他要求，门户网站获取并显示来自多条航线，旅店或汽车租赁公司的报价。在获取不同公司的报价中，可能会调Web服务，访问数据库，执行一个EDI事务或者其他机制。 这种时候，不宜让页面的响应时间受限于最慢的响应时间，而应该只是显示在指定时间内收到的消息
+
+CompletionService不能够做到限时任务，而面对一组任务，想要获得所有的future除了轮询，还有更加简单的方式 invokeAll
+
+```java
+List<Future<TravelQuote>> futures=exec.invokeAll(tasks,time,unit); 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
